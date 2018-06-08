@@ -1,48 +1,55 @@
 package terminal
 
+import blocks.DesktopComputerBlock
+import modid
+import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util.ResourceLocation
-import net.minecraftforge.fml.common.network.NetworkRegistry
-import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper
-import net.minecraftforge.fml.relauncher.Side
-import net.minecraftforge.fml.relauncher.SideOnly
+import os.OperatingSystem
 import system.DeviceSystem
-import terminal.errors.nullCommand
-import terminal.errors.throwBadResponse
-import terminal.messages.TerminalMessage
+import terminal.messages.LoadTermHistoryInStorageMessage
+import terminal.messages.SaveTermHistoryInMemory
+
+val commands = HashMap<String, TerminalCommand>()
 
 interface TerminalCommand{
     val name: ResourceLocation
-    val execution: (DeviceSystem) -> TerminalResponse
+    val execution: (EntityPlayerMP, OperatingSystem, Array<String>) -> TerminalResponse
     fun serialize(): NBTTagCompound
     fun deserialize(nbt: NBTTagCompound)
 }
 
-class TerminalStream{
-    private var message: TerminalMessage? = null
-    private val streamNetwork = NetworkRegistry.INSTANCE.newSimpleChannel("terminal_stream")
+object EchoCommand : TerminalCommand{
+    override val name: ResourceLocation
+        get() = ResourceLocation(modid, "echo")
+    override val execution: (EntityPlayerMP, OperatingSystem, Array<String>) -> TerminalResponse
+        get() = {_, _, args ->
+            val sb = StringBuilder()
+            args.forEach {
+                sb.append("$it ")
+            }
+            TerminalResponse(0, sb.toString())
+        }
 
-    var response: Any? = null
-        get() = field ?: throwBadResponse(message?.command)
-
-    fun sendCommand(command: TerminalCommand){
-        message = TerminalMessage(command)
-        sendMessage()
-    }
-
-    internal fun setResponse(response: (TerminalCommand)->Any){
-        this.response = response(message?.command ?: throw nullCommand())
-    }
-
-    /**
-     * Nobody can access this, so that server doesn't crash due to null message :D
-     */
-    private fun sendMessage(){
-        streamNetwork.sendToServer(message ?: return)
-    }
+    override fun serialize(): NBTTagCompound = NBTTagCompound()
+    override fun deserialize(nbt: NBTTagCompound) {}
 }
 
-data class TerminalResponse(val code: Int, val message: String, val ret: Any)
+object ClearCommand : TerminalCommand{
+    override val name: ResourceLocation
+        get() = ResourceLocation(modid, "clear")
+    override val execution: (EntityPlayerMP, OperatingSystem, Array<String>) -> TerminalResponse
+        get() = {player,_, _ ->
+            DeviceSystem.memory.deallocate("terminal_history")
+            val nbt = NBTTagCompound()
+            nbt.setString("name", "terminal_history")
+            DeviceSystem.memory.allocate(nbt)
+            TerminalStream.streamNetwork.sendTo(LoadTermHistoryInStorageMessage(DeviceSystem.memory.referenceTo("terminal_history")), player)
+            TerminalResponse(0, "")
+        }
 
-class BadResponseException(reason: String, command: TerminalCommand) :
-        Exception("${command.name} had a bad response: $reason")
+    override fun serialize(): NBTTagCompound = NBTTagCompound()
+    override fun deserialize(nbt: NBTTagCompound) {
+    }
+
+}

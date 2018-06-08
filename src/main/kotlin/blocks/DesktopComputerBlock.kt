@@ -17,7 +17,10 @@ import os.OperatingSystem
 import DevicesPlus
 import net.minecraft.block.ITileEntityProvider
 import net.minecraft.creativetab.CreativeTabs
+import net.minecraft.nbt.NBTBase
+import net.minecraft.nbt.NBTException
 import net.minecraft.world.IBlockAccess
+import terminal.TerminalResponse
 
 object DesktopComputerBlock : Block(Material.IRON), ITileEntityProvider {
     var beginStartup = false
@@ -46,25 +49,49 @@ object DesktopComputerBlock : Block(Material.IRON), ITileEntityProvider {
     override fun createNewTileEntity(worldIn: World?, meta: Int): TileEntity? = te
 
     override fun isFullCube(state: IBlockState?): Boolean = false
-    override fun isOpaqueCube(state: IBlockState?): Boolean = true
-    override fun isNormalCube(state: IBlockState?, world: IBlockAccess?, pos: BlockPos?): Boolean = false
+    override fun isOpaqueCube(state: IBlockState?): Boolean = false
 }
 
 
 class TileEntityDesktopComputer(val block: DesktopComputerBlock) : TileEntity(){
-    var os: OperatingSystem? = null
-    val nbt = NBTTagCompound()
+    var commandResponse: TerminalResponse? = null
+    lateinit var os: OperatingSystem
+    val storage = NBTTagCompound()
 
-    //This is supposed to start the operating system and display it on the screen
     fun startup(player: EntityPlayer){
         println("Starting system...")
-        player.openGui(DevicesPlus, 0, this.world, this.pos.x, this.pos.y, this.pos.z) //This works!
+        player.openGui(DevicesPlus, 0, this.world, this.pos.x, this.pos.y, this.pos.z)
+    }
+
+    fun postCommandResponse(response: TerminalResponse){
+        commandResponse = response
+    }
+
+    fun writeToStorage(name: String, nbt: NBTBase){
+        if(storage.hasKey(name)){
+            val tag = storage.getCompoundTag(name)
+            if(tag == nbt){
+                return
+            }
+        }
+        storage.setTag(name, nbt)
+    }
+
+    fun writeOverStorageAt(at: String, nbt: NBTBase){
+        storage.removeTag(at)
+        writeToStorage(at, nbt)
+    }
+
+    fun readFromStorage(name: String): NBTBase{
+        if(storage.hasKey(name)){
+            return storage.getTag(name)
+        }
+        throw IllegalArgumentException("No such tag in storage: $name")
     }
 
     override fun writeToNBT(compound: NBTTagCompound): NBTTagCompound {
         super.writeToNBT(compound)
-        val nbt = NBTTagCompound()
-
-        return nbt
+        compound.setTag("storage", storage)
+        return compound
     }
 }

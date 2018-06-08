@@ -4,16 +4,21 @@ import client.GuiRegistry
 import net.minecraft.block.Block
 import net.minecraft.item.Item
 import net.minecraft.item.ItemBlock
-import net.minecraft.network.NetworkManager
-import net.minecraft.tileentity.TileEntity
 import net.minecraftforge.event.RegistryEvent
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.SidedProxy
 import net.minecraftforge.fml.common.event.FMLInitializationEvent
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent
+import net.minecraftforge.fml.common.event.FMLServerStartingEvent
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.common.network.NetworkRegistry
 import net.minecraftforge.fml.common.registry.GameRegistry
+import net.minecraftforge.fml.relauncher.Side
+import terminal.ClearCommand
+import terminal.EchoCommand
+import terminal.TerminalStream
+import terminal.messages.*
+import terminal.registerTerminalCommand
 
 const val modid = "devices+"
 const val name = "Devices Plus"
@@ -33,7 +38,20 @@ object DevicesPlus{
     @Mod.EventHandler
     fun init(event: FMLInitializationEvent){
         GameRegistry.registerTileEntity(TileEntityDesktopComputer::class.java, "desktop")
+        registerNetworking()
     }
+
+    @Mod.EventHandler
+    fun serverStarting(event: FMLServerStartingEvent){
+        registerTerminalCommand(EchoCommand, ClearCommand)
+    }
+}
+
+fun registerNetworking(){
+    TerminalStream.streamNetwork.registerMessage(terminalExecuteCommandMessage, TerminalExecuteCommandMessage::class.java, 0, Side.SERVER)
+    TerminalStream.streamNetwork.registerMessage(terminalCommandResponseToClient, TerminalCommandResponseToClient::class.java, 1, Side.CLIENT)
+    TerminalStream.streamNetwork.registerMessage(saveTermHistoryInStorageHandler, SaveTermHistoryInMemory::class.java, 2, Side.SERVER)
+    TerminalStream.streamNetwork.registerMessage(loadTermHistoryInStorageHandler, LoadTermHistoryInStorageMessage::class.java, 3, Side.CLIENT)
 }
 
 @Mod.EventBusSubscriber(modid=modid)

@@ -1,20 +1,33 @@
 package terminal
 
-import com.google.common.reflect.TypeToken
-import com.google.gson.*
+import net.minecraft.entity.player.EntityPlayerMP
+import net.minecraftforge.fml.common.network.NetworkRegistry
 import os.OperatingSystem
-import system.DeviceSystem
-import java.lang.reflect.Type
+import terminal.messages.TerminalCommandResponseToClient
+import terminal.messages.TerminalExecuteCommandMessage
 
-class Terminal(val os: OperatingSystem, val stream: TerminalStream){
-    fun executeCommand(command: TerminalCommand){
-
-        command.execution(DeviceSystem)
-    }
-
-    fun start(){
-        os.commands.forEach {
-            stream.sendCommand(it)
-        }
+fun registerTerminalCommand(vararg _commands: TerminalCommand){
+    for(command in _commands){
+        commands[command.name.resourcePath] = command
     }
 }
+
+object TerminalStream{
+    val streamNetwork = NetworkRegistry.INSTANCE.newSimpleChannel("terminal_stream")
+    var objTransfer: Any? = null
+    internal lateinit var response: TerminalResponse
+
+    fun sendCommand(commandName: String, commandArgs: Array<String>){
+        val message = TerminalExecuteCommandMessage()
+        message.command = commandName
+        message.args = commandArgs
+        streamNetwork.sendToServer(message)
+    }
+
+    fun executeCommand(executor: EntityPlayerMP, command: TerminalCommand, os: OperatingSystem, args: Array<String>){
+        println("Executing command: ${command.name}")
+        response = command.execution(executor, os, args)
+    }
+}
+
+data class TerminalResponse(val code: Int, val message: String)

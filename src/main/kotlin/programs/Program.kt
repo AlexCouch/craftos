@@ -2,7 +2,7 @@ package programs
 
 import net.minecraft.nbt.NBTTagCompound
 import os.katt.KattOS
-import terminal.Terminal
+import terminal.TerminalStream
 
 abstract class Program{
     /**
@@ -61,5 +61,5 @@ interface ProgramRenderer{
 data class RenderCoords(val x: Int, val y: Int, val mx: Int, val my: Int)
 
 interface ProgramFunction{
-    fun execute(terminal: Terminal, os: KattOS): Boolean
+    fun execute(os: KattOS): Boolean
 }

@@ -7,7 +7,6 @@ import os.OSInterface
 import os.OperatingSystem
 import programs.Program
 import system.DeviceSystem
-import terminal.Terminal
 import terminal.TerminalCommand
 import terminal.TerminalStream
 
@@ -18,8 +17,6 @@ class KattOS : OperatingSystem {
         get() = HashSet()
     override val commands: Set<TerminalCommand>
         get() = HashSet()
-    override val terminal: Terminal
-        get() = Terminal(this, TerminalStream())
     override val environment: OSInterface?
         get() = null
 

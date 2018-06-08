@@ -1,12 +1,23 @@
 package terminal.errors
 
-import terminal.BadResponseException
-import terminal.TerminalCommand
+class BadResponseException(reason: String, message: String) :
+        Exception("$reason: $message")
 
-fun throwBadResponse(terminalCommand: TerminalCommand?){
-    throw BadResponseException("A terminal command returned with a bad response", terminalCommand ?: throw nullCommand())
+fun throwBadResponse(terminalCommand: String, code: Int){
+    val message = when(code){
+        0->{
+            "$terminalCommand doesn't exist!"
+        }
+        1->{
+            "$terminalCommand misused! See command manual for more!"
+        }
+        else -> {
+            "$terminalCommand execution failed! See crash log for more info."
+        }
+    }
+    throw BadResponseException("A terminal command returned with a bad response", message)
 }
 
-fun nullCommand(): Exception{
-    return NullPointerException("Tried to use a command but was null!")
+fun nullCommand(terminalCommand: String){
+    throwBadResponse(terminalCommand, 0)
 }

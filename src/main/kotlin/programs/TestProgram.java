@@ -23,7 +23,7 @@ public class TestProgram extends Program{
     @NotNull
     @Override
     public ProgramFunction getFunction() {
-        return (terminal, os) -> false;
+        return os -> false;
     }
 
     @Override
@@ -34,6 +34,6 @@ public class TestProgram extends Program{
     @NotNull
     @Override
     public NBTTagCompound serialize() {
-        return null;
+        return new NBTTagCompound();
     }
 }

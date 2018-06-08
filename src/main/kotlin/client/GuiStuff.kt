@@ -1,34 +1,145 @@
 package client
 
 import blocks.DesktopComputerBlock
-import blocks.TileEntityDesktopComputer
-import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.Gui
 import net.minecraft.client.gui.GuiScreen
+import net.minecraft.client.gui.GuiTextField
+import net.minecraft.client.renderer.GlStateManager
 import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.nbt.NBTTagCompound
+import net.minecraft.nbt.NBTTagString
 import net.minecraft.world.World
-import net.minecraftforge.fml.client.IModGuiFactory
+import net.minecraftforge.common.util.Constants
 import net.minecraftforge.fml.common.network.IGuiHandler
-import org.lwjgl.opengl.GL11
+import org.lwjgl.input.Keyboard
+import terminal.TerminalResponse
+import terminal.TerminalStream
+import terminal.messages.SaveTermHistoryInMemory
+import java.awt.Color
 
 class TerminalScreen : GuiScreen(){
+    private var w = 0.0
+    private var h = 0.0
+    private val x = 30.0
+    private val y = 20.0
+    private var cx = x + 10.0
+    private var cy = y + 15
+
+    val lines = ArrayList<String>()
+    private var commandSent = false
+
+    lateinit var textField: GuiTextField
+
     override fun initGui() {
         super.initGui()
+        this.w = this.width - 35.0
+        this.h = this.height - 35.0
+        textField = GuiTextField(0, this.fontRenderer, this.cx.toInt(), this.cy.toInt(), this.w.toInt() - 25, this.h.toInt() - 25)
+        textField.isFocused = true
+        textField.enableBackgroundDrawing = false
+    }
+
+    override fun keyTyped(typedChar: Char, keyCode: Int) {
+        super.keyTyped(typedChar, keyCode)
+        when(keyCode){
+            Keyboard.KEY_RETURN -> {
+                val text = textField.text
+                lines += text
+                textField.text = ""
+                nextLine()
+                sendCommand(text)
+                return
+            }
+        }
+        this.textField.textboxKeyTyped(typedChar, keyCode)
+    }
+
+    fun nextLine(){
+        textField.y += 8
+    }
+
+    fun sendCommand(commandStr: String){
+        val commandSplit = commandStr.split(' ')
+        val commandName = commandSplit[0]
+        val argsArr = commandSplit.subList(1, commandSplit.size)
+        TerminalStream.sendCommand(commandName, argsArr.toTypedArray())
+        commandSent = true
+    }
+
+    fun checkForCommandResponse(){
+        val response = DesktopComputerBlock.te?.commandResponse ?: return
+        printResponse(response)
+        refreshTerminalHistory()
+    }
+
+    private fun refreshTerminalHistory(){
+        saveTermHistory()
+        loadTermHistory()
+    }
+
+    private fun printResponse(response: TerminalResponse){
+        val line =
+                if(response.code == 0)
+                    response.message
+                else
+                    "Command had a bad response: ${response.message} ; Error Code: ${response.code}"
+        lines += line
+        commandSent = false
+        nextLine()
     }
 
     override fun doesGuiPauseGame(): Boolean = false
 
-    //Not sure what to do here for drawing a black screen and rendering text (I know how to render text)
     override fun drawScreen(mouseX: Int, mouseY: Int, partialTicks: Float) {
         super.drawScreen(mouseX, mouseY, partialTicks)
-        GL11.glColor3f(0.0f, 0.0f, 0.0f)
-        this.drawString(Minecraft.getMinecraft().fontRenderer, "Testing minecraft kernel gui!", 10, 5, 0xffffff)
+        this.drawDefaultBackground()
+        GlStateManager.color(0f, 0f, 0f)
+        Gui.drawRect(this.x.toInt(), this.y.toInt(), this.w.toInt(), this.h.toInt(), Color.BLACK.rgb)
+        this.textField.drawTextBox()
+        lines.filterIndexed { index, s ->
+            this.fontRenderer.drawString(s, cx.toInt(), cy.toInt() + (8 * index), Color.WHITE.rgb)
+            true
+        }
+        if(commandSent)
+            checkForCommandResponse()
+    }
+
+    fun saveTermHistory(){
+        TerminalStream.streamNetwork.sendToServer(SaveTermHistoryInMemory(lines))
+    }
+
+    fun loadTermHistory(){
+        if(TerminalStream.objTransfer != null){
+            if(TerminalStream.objTransfer is NBTTagCompound) {
+                val nbt = TerminalStream.objTransfer as NBTTagCompound
+                this.lines.clear()
+                if (nbt.hasKey("lines")) {
+                    val list = nbt.getTagList("lines", Constants.NBT.TAG_STRING)
+                    for (l in list) {
+                        val s = l as NBTTagString
+                        this.lines.add(s.string)
+                    }
+                }
+                resetCaretLocation()
+            }
+            TerminalStream.objTransfer = null
+        }
+    }
+
+    fun resetCaretLocation(){
+        textField.y = (y + 15 + (8 * this.lines.size)).toInt()
+    }
+
+    override fun updateScreen() {
+        super.updateScreen()
+        this.textField.updateCursorCounter()
     }
 }
 
 object GuiRegistry : IGuiHandler{
     override fun getClientGuiElement(ID: Int, player: EntityPlayer, world: World?, x: Int, y: Int, z: Int): Any? {
         if(ID == 0){
-            return TerminalScreen() //This works
+            return TerminalScreen()
         }
         return null
     }
