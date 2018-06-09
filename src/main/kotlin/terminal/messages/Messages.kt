@@ -31,9 +31,13 @@ class TerminalExecuteCommandMessage() : IMessage{
             }
         }
         this.args = argsArr.toTypedArray()
+        println(this.command)
+        println(this.args.toString())
     }
 
     override fun toBytes(buf: ByteBuf) {
+        println(this.command)
+        println(this.args.toString())
         ByteBufUtils.writeUTF8String(buf, command)
         val argsTag = NBTTagList()
         args.forEachIndexed{ index, str ->
@@ -48,7 +52,7 @@ class TerminalExecuteCommandMessage() : IMessage{
 }
 
 class TerminalCommandResponseToClient() : IMessage{
-    lateinit var response: TerminalResponse
+    var response: TerminalResponse? = null
 
     constructor(response: TerminalResponse) : this(){
         this.response = response
@@ -61,12 +65,14 @@ class TerminalCommandResponseToClient() : IMessage{
             val message = nbt.getString("message")
             this.response = TerminalResponse(code, message)
         }
+        println(this.response)
     }
 
     override fun toBytes(buf: ByteBuf) {
+        println(this.response)
         val nbt = NBTTagCompound()
-        nbt.setInteger("code", response.code)
-        nbt.setString("message", response.message)
+        nbt.setInteger("code", response?.code ?: return)
+        nbt.setString("message", response?.message ?: return)
         ByteBufUtils.writeTag(buf, nbt)
     }
 
@@ -85,9 +91,11 @@ class SaveTermHistoryInMemory() : IMessage{
     }
     override fun fromBytes(buf: ByteBuf) {
         this.lines = ByteBufUtils.readTag(buf) ?: return
+        println(this.lines)
     }
 
     override fun toBytes(buf: ByteBuf) {
+        println(this.lines)
         ByteBufUtils.writeTag(buf, this.lines)
     }
 }
@@ -101,9 +109,11 @@ class LoadTermHistoryInStorageMessage() : IMessage{
 
     override fun fromBytes(buf: ByteBuf) {
         this.nbt = ByteBufUtils.readTag(buf) ?: NBTTagCompound()
+        println(this.nbt)
     }
 
     override fun toBytes(buf: ByteBuf) {
+        println(this.nbt)
         ByteBufUtils.writeTag(buf, this.nbt)
     }
 
@@ -118,7 +128,12 @@ val saveTermHistoryInStorageHandler = IMessageHandler<SaveTermHistoryInMemory, L
 }
 
 val loadTermHistoryInStorageHandler = IMessageHandler<LoadTermHistoryInStorageMessage, IMessage>{ msg, ctx ->
-    TerminalStream.objTransfer = msg.nbt
+    val list = msg.nbt.getTagList("lines", Constants.NBT.TAG_STRING)
+    val history = arrayListOf<String>()
+    list.forEach {
+        history.add((it as NBTTagString).string)
+    }
+    TerminalStream.terminal.loadTerminalHistory(history)
     null
 }
 
@@ -129,6 +144,6 @@ val terminalExecuteCommandMessage = IMessageHandler <TerminalExecuteCommandMessa
 }
 
 val terminalCommandResponseToClient = IMessageHandler<TerminalCommandResponseToClient, IMessage>{msg, _ ->
-    DesktopComputerBlock.te?.postCommandResponse(msg.response)
+    DesktopComputerBlock.te?.postCommandResponse(msg.response ?: return@IMessageHandler null)
     null
 }

@@ -14,6 +14,7 @@ import net.minecraftforge.fml.common.network.IGuiHandler
 import org.lwjgl.input.Keyboard
 import terminal.TerminalResponse
 import terminal.TerminalStream
+import terminal.messages.LoadTermHistoryInStorageMessage
 import terminal.messages.SaveTermHistoryInMemory
 import java.awt.Color
 
@@ -25,7 +26,7 @@ class TerminalScreen : GuiScreen(){
     private var cx = x + 10.0
     private var cy = y + 15
 
-    val lines = ArrayList<String>()
+    private var lines = ArrayList<String>()
     private var commandSent = false
 
     lateinit var textField: GuiTextField
@@ -37,6 +38,7 @@ class TerminalScreen : GuiScreen(){
         textField = GuiTextField(0, this.fontRenderer, this.cx.toInt(), this.cy.toInt(), this.w.toInt() - 25, this.h.toInt() - 25)
         textField.isFocused = true
         textField.enableBackgroundDrawing = false
+        TerminalStream.terminal = this
     }
 
     override fun keyTyped(typedChar: Char, keyCode: Int) {
@@ -44,18 +46,14 @@ class TerminalScreen : GuiScreen(){
         when(keyCode){
             Keyboard.KEY_RETURN -> {
                 val text = textField.text
-                lines += text
+                lines.add(text)
                 textField.text = ""
-                nextLine()
                 sendCommand(text)
+                saveTermHistory()
                 return
             }
         }
         this.textField.textboxKeyTyped(typedChar, keyCode)
-    }
-
-    fun nextLine(){
-        textField.y += 8
     }
 
     fun sendCommand(commandStr: String){
@@ -69,12 +67,7 @@ class TerminalScreen : GuiScreen(){
     fun checkForCommandResponse(){
         val response = DesktopComputerBlock.te?.commandResponse ?: return
         printResponse(response)
-        refreshTerminalHistory()
-    }
-
-    private fun refreshTerminalHistory(){
-        saveTermHistory()
-        loadTermHistory()
+        resetCaretLocation()
     }
 
     private fun printResponse(response: TerminalResponse){
@@ -83,9 +76,8 @@ class TerminalScreen : GuiScreen(){
                     response.message
                 else
                     "Command had a bad response: ${response.message} ; Error Code: ${response.code}"
-        lines += line
+        lines.add(line)
         commandSent = false
-        nextLine()
     }
 
     override fun doesGuiPauseGame(): Boolean = false
@@ -96,34 +88,25 @@ class TerminalScreen : GuiScreen(){
         GlStateManager.color(0f, 0f, 0f)
         Gui.drawRect(this.x.toInt(), this.y.toInt(), this.w.toInt(), this.h.toInt(), Color.BLACK.rgb)
         this.textField.drawTextBox()
-        lines.filterIndexed { index, s ->
+        lines.forEachIndexed { index, s ->
             this.fontRenderer.drawString(s, cx.toInt(), cy.toInt() + (8 * index), Color.WHITE.rgb)
-            true
         }
         if(commandSent)
             checkForCommandResponse()
     }
 
     fun saveTermHistory(){
-        TerminalStream.streamNetwork.sendToServer(SaveTermHistoryInMemory(lines))
+        TerminalStream.sendMessageToServer(SaveTermHistoryInMemory(lines))
     }
 
-    fun loadTermHistory(){
-        if(TerminalStream.objTransfer != null){
-            if(TerminalStream.objTransfer is NBTTagCompound) {
-                val nbt = TerminalStream.objTransfer as NBTTagCompound
-                this.lines.clear()
-                if (nbt.hasKey("lines")) {
-                    val list = nbt.getTagList("lines", Constants.NBT.TAG_STRING)
-                    for (l in list) {
-                        val s = l as NBTTagString
-                        this.lines.add(s.string)
-                    }
-                }
-                resetCaretLocation()
-            }
-            TerminalStream.objTransfer = null
-        }
+    fun loadTerminalHistory(history: ArrayList<String>){
+        this.lines = history
+        resetCaretLocation()
+    }
+
+    fun modifyTerminalHistory(callback: (ArrayList<String>)->Unit){
+        callback(this.lines)
+        saveTermHistory()
     }
 
     fun resetCaretLocation(){

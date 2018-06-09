@@ -1012,7 +1012,7 @@ Build 1.12-14.21.1.2417:
 	python0429: Make Optional.Interface repeatable (#4138)
 
 Build 1.12-14.21.1.2416:
-	xalcon: Added support for vanilla "nbt strings" in json recipes (#4113)
+	xalcon: Added support for vanilla "list strings" in json recipes (#4113)
 
 Build 1.12-14.21.1.2415:
 	LexManos:
@@ -1064,7 +1064,7 @@ Build 1.12-14.21.1.2405:
 		(#4148)
 
 Build 1.12-14.21.1.2404:
-	williewillus: Allow advancement icons to have nbt (#4114)
+	williewillus: Allow advancement icons to have list (#4114)
 	maxanier: Adjust EnumHelper#addCreatureType to EnumType (#4089)
 
 Build 1.12-14.21.1.2403:
@@ -3093,7 +3093,7 @@ Build 1.9.4-12.17.0.1973:
 	mezz: Fix incorrect FluidUtil doc (#2996)
 
 Build 1.9.4-12.17.0.1972:
-	mezz: Fix ItemStack deserialization can't clear nbt (#3005)
+	mezz: Fix ItemStack deserialization can't clear list (#3005)
 	mezz: Improve the "missing mods" on-screen error message (#2997)
 
 Build 1.9.4-12.17.0.1970:
@@ -6189,8 +6189,8 @@ Build 1.8-11.14.2.1421:
 		(cherry picked from commit de066a86da281d381b0e3ab9e83682720327049c)
 		
 		Conflicts:
-			patches/minecraft/net/minecraft/nbt/CompressedStreamTools.java.patch
-			patches/minecraft/net/minecraft/nbt/NBTTagList.java.patch
+			patches/minecraft/net/minecraft/list/CompressedStreamTools.java.patch
+			patches/minecraft/net/minecraft/list/NBTTagList.java.patch
 	cpw: Verify that the fluid registry doesn't contain "junk" fluids thru reflection.
 	cpw: MinecraftForge/FML@8f9e3a7e30c8cc436dcb8d94b18b4634e0376339 Exceptions during construction phase should not propogate and cause an immediate crash. Closes #638
 	cpw: Change logging to avoid the String.format bug. Closes #1809
@@ -6464,8 +6464,8 @@ Build 1.7.10-10.13.3.1376-1.7.10:
 		(cherry picked from commit de066a86da281d381b0e3ab9e83682720327049c)
 		
 		Conflicts:
-			patches/minecraft/net/minecraft/nbt/CompressedStreamTools.java.patch
-			patches/minecraft/net/minecraft/nbt/NBTTagList.java.patch
+			patches/minecraft/net/minecraft/list/CompressedStreamTools.java.patch
+			patches/minecraft/net/minecraft/list/NBTTagList.java.patch
 
 Build 1.8-11.14.1.1375:
 	LexManos: Fixed NBTSizeTracker missing a lot of data being read. Also made new NBT object allocation claim 32-bits in the size tracker.
@@ -7520,7 +7520,7 @@ Build 1.7.10-10.13.0.1199:
 	t.tomkins:
 		Legacy Liquid Load Fix
 		
-		nbt.getString("FluidName") no longer returns null, it returns an empty string.
+		list.getString("FluidName") no longer returns null, it returns an empty string.
 		
 		This patch allows legacy liquids to be resolved once again.
 
@@ -10577,7 +10577,7 @@ Build 1.5.1-7.7.0.605:
 Build 1.5.1-7.7.0.604:
 	Christian:
 		Allow itemstack sensitive damage computation for attacks. Should allow
-		storing data in the nbt :)
+		storing data in the list :)
 
 Build 1.5.1-7.7.0.603:
 	Christian:
