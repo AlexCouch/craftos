@@ -1,17 +1,69 @@
 package system
 
-import net.minecraft.nbt.NBTBase
+import blocks.TileEntityDesktopComputer
+import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.nbt.NBTTagCompound
 import os.OperatingSystem
-import os.katt.KattOS
+import DevicesPlus
+import com.teamwizardry.librarianlib.features.base.block.tile.TileMod
+import com.teamwizardry.librarianlib.features.saving.Savable
+import com.teamwizardry.librarianlib.features.saving.Save
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiScreen
+import net.minecraft.nbt.NBTUtil
+import net.minecraft.tileentity.TileEntity
+import net.minecraft.util.text.TextComponentString
+import net.minecraftforge.fml.client.config.GuiUtils
+import network.Port
+import os.couch.CouchOS
+import stream
+import terminal.CouchTerminal
+import terminal.messages.OpenTerminalGuiMessage
 
-object DeviceSystem{
-    var os: OperatingSystem = KattOS()
-    var memory = Memory(10000, NBTTagCompound())
+@Savable
+class CouchDesktopSystem(val desktop: TileEntityDesktopComputer) : DeviceSystem<TileEntityDesktopComputer>{
+    override val os: OperatingSystem? = desktop.os
+    override val memory = Memory(10000, NBTTagCompound())
+    override val storage: NBTTagCompound
+    get(){
+        val tag = NBTTagCompound()
+        tag.setString("name", this.name)
+        tag.setTag("os", os?.serializeOS() ?: NBTTagCompound())
+        tag.setTag("pos", NBTUtil.createPosTag(desktop.pos)) //Might be useful later
+        return tag
+    }
+    override val name = "couch_desktop"
+    override val te: TileEntityDesktopComputer = desktop
+    override val ports: List<Port<*>> = ArrayList()
+
+    lateinit var player: EntityPlayerMP
+
+    override fun shutdown() {
+        //Shutdown applications, wait til all have shutdown, and clear memory
+        val programNBT = NBTTagCompound()
+        if(this.os?.apps != null){
+            for(program in this.os.apps){
+                programNBT.setTag("programs", program.serialize())
+                program.shutdown()
+            }
+        }
+        memory.clear()
+        Minecraft.getMinecraft().displayGuiScreen(null)
+    }
+
+    override fun start() {
+        //load up ROM, and check all hardware for faults
+        this.player.sendStatusMessage(TextComponentString("System started..."), true)
+    }
 }
 
-class Memory(private val space: Long, private val storedMemory: NBTTagCompound){
+@Savable
+class Memory(@Save val space: Long, @Save var storedMemory: NBTTagCompound){
     init{
+        prepareMemory()
+    }
+
+    fun prepareMemory(){
         storedMemory.setLong("maxmem", space)
         storedMemory.setLong("availmem", space)
     }
@@ -71,4 +123,34 @@ class Memory(private val space: Long, private val storedMemory: NBTTagCompound){
         }
         throw IllegalStateException("Trying to deallocate non-existent tag: $name")
     }
+
+    //Do not ever call this unless you know what you're doing!!!
+    fun clear(){
+        storedMemory = NBTTagCompound()
+        prepareMemory()
+    }
+}
+
+@Savable
+interface DeviceSystem<T : TileMod>{
+    @Save
+    val name: String
+    @Save
+    val memory: Memory
+    @Save
+    val storage: NBTTagCompound
+    /**
+     * This is nullable because of kernels (which will be implemented later on)
+     */
+    @Save
+    val os: OperatingSystem?
+    @Save
+    val te: T
+    @Save
+    val ports: List<Port<*>>
+
+    fun start()
+    //TODO: Create system phases
+//    fun idle()
+    fun shutdown()
 }

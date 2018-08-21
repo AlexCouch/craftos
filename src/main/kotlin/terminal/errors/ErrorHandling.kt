@@ -12,7 +12,7 @@ fun throwBadResponse(terminalCommand: String, code: Int){
             "$terminalCommand misused! See command manual for more!"
         }
         else -> {
-            "$terminalCommand execution failed! See crash log for more info."
+            "$terminalCommand execute failed! See crash log for more info."
         }
     }
     throw BadResponseException("A terminal command returned with a bad response", message)

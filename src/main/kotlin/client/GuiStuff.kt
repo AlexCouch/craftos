@@ -1,24 +1,25 @@
 package client
 
-import blocks.DesktopComputerBlock
+import blocks.TileEntityDesktopComputer
+import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Gui
 import net.minecraft.client.gui.GuiScreen
 import net.minecraft.client.gui.GuiTextField
 import net.minecraft.client.renderer.GlStateManager
 import net.minecraft.entity.player.EntityPlayer
-import net.minecraft.nbt.NBTTagCompound
-import net.minecraft.nbt.NBTTagString
+import net.minecraft.inventory.Container
+import net.minecraft.util.math.BlockPos
 import net.minecraft.world.World
-import net.minecraftforge.common.util.Constants
 import net.minecraftforge.fml.common.network.IGuiHandler
 import org.lwjgl.input.Keyboard
-import terminal.TerminalResponse
-import terminal.TerminalStream
-import terminal.messages.LoadTermHistoryInStorageMessage
+import os.couch.CouchOS
+import pkg.NetworkingPackage
+import terminal.CouchTerminal
 import terminal.messages.SaveTermHistoryInMemory
+import utils.TerminalPrintStream
 import java.awt.Color
 
-class TerminalScreen : GuiScreen(){
+class TerminalScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
     private var w = 0.0
     private var h = 0.0
     private val x = 30.0
@@ -27,9 +28,9 @@ class TerminalScreen : GuiScreen(){
     private var cy = y + 15
 
     private var lines = ArrayList<String>()
-    private var commandSent = false
 
     lateinit var textField: GuiTextField
+    val terminal = CouchTerminal(this)
 
     override fun initGui() {
         super.initGui()
@@ -38,7 +39,13 @@ class TerminalScreen : GuiScreen(){
         textField = GuiTextField(0, this.fontRenderer, this.cx.toInt(), this.cy.toInt(), this.w.toInt() - 25, this.h.toInt() - 25)
         textField.isFocused = true
         textField.enableBackgroundDrawing = false
-        TerminalStream.terminal = this
+        textField.text = "> "
+        terminal.start()
+        println(te.system)
+        te.os = CouchOS(te.system!!, terminal)
+        te.os?.registerPackage(NetworkingPackage())
+        System.setOut(TerminalPrintStream(System.out, this.terminal))
+        System.setErr(TerminalPrintStream(System.err, this.terminal))
     }
 
     override fun keyTyped(typedChar: Char, keyCode: Int) {
@@ -47,7 +54,7 @@ class TerminalScreen : GuiScreen(){
             Keyboard.KEY_RETURN -> {
                 val text = textField.text
                 lines.add(text)
-                textField.text = ""
+                textField.text = "> "
                 sendCommand(text)
                 saveTermHistory()
                 return
@@ -60,24 +67,7 @@ class TerminalScreen : GuiScreen(){
         val commandSplit = commandStr.split(' ')
         val commandName = commandSplit[0]
         val argsArr = commandSplit.subList(1, commandSplit.size)
-        TerminalStream.sendCommand(commandName, argsArr.toTypedArray())
-        commandSent = true
-    }
-
-    fun checkForCommandResponse(){
-        val response = DesktopComputerBlock.te?.commandResponse ?: return
-        printResponse(response)
-        resetCaretLocation()
-    }
-
-    private fun printResponse(response: TerminalResponse){
-        val line =
-                if(response.code == 0)
-                    response.message
-                else
-                    "Command had a bad response: ${response.message} ; Error Code: ${response.code}"
-        lines.add(line)
-        commandSent = false
+        terminal.sendCommand(commandName, argsArr.toTypedArray())
     }
 
     override fun doesGuiPauseGame(): Boolean = false
@@ -87,16 +77,15 @@ class TerminalScreen : GuiScreen(){
         this.drawDefaultBackground()
         GlStateManager.color(0f, 0f, 0f)
         Gui.drawRect(this.x.toInt(), this.y.toInt(), this.w.toInt(), this.h.toInt(), Color.BLACK.rgb)
+        println(this.textField)
         this.textField.drawTextBox()
         lines.forEachIndexed { index, s ->
             this.fontRenderer.drawString(s, cx.toInt(), cy.toInt() + (8 * index), Color.WHITE.rgb)
         }
-        if(commandSent)
-            checkForCommandResponse()
     }
 
     fun saveTermHistory(){
-        TerminalStream.sendMessageToServer(SaveTermHistoryInMemory(lines))
+        terminal.sendMessageToServer(SaveTermHistoryInMemory(lines, this.te.pos))
     }
 
     fun loadTerminalHistory(history: ArrayList<String>){
@@ -115,18 +104,21 @@ class TerminalScreen : GuiScreen(){
 
     override fun updateScreen() {
         super.updateScreen()
-        this.textField.updateCursorCounter()
+        if(this::textField.isInitialized){
+            this.textField.updateCursorCounter()
+        }
     }
 }
 
 object GuiRegistry : IGuiHandler{
-    override fun getClientGuiElement(ID: Int, player: EntityPlayer, world: World?, x: Int, y: Int, z: Int): Any? {
+    override fun getClientGuiElement(ID: Int, player: EntityPlayer, world: World, x: Int, y: Int, z: Int): Any?{
         if(ID == 0){
-            return TerminalScreen()
+            val te = Minecraft.getMinecraft().world.getTileEntity(BlockPos(x, y, z)) as TileEntityDesktopComputer
+            return TerminalScreen(te)
         }
         return null
     }
 
-    override fun getServerGuiElement(ID: Int, player: EntityPlayer?, world: World?, x: Int, y: Int, z: Int): Any? = null
+    override fun getServerGuiElement(ID: Int, player: EntityPlayer?, world: World, x: Int, y: Int, z: Int): Any? = null
 
 }

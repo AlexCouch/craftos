@@ -1,8 +1,8 @@
 package programs
 
 import net.minecraft.nbt.NBTTagCompound
-import os.katt.KattOS
-import terminal.TerminalStream
+import os.OperatingSystem
+import os.couch.CouchOS
 
 abstract class Program{
     /**
@@ -15,14 +15,14 @@ abstract class Program{
      *
      * This will need a lambda returned if you're using it
      */
-    open val renderer: ProgramRenderer? = null
+    abstract val renderer: ProgramRenderer?
     /**
      * Whether this is a command line interface; true will not start the renderer
      */
     abstract val isCLI: Boolean
     /**
      * What the program does. For java users, this takes a lambda.
-     * When you implement this, you're going to return a lambda that takes in a [Terminal] and [KattOS]
+     * When you implement this, you're going to return a lambda that takes in a [terminal.Terminal] and [os.OperatingSystem]
      * as parameters, so you have everything you need.
      *
      * These two objects allow you to communicate with the operating system by executing commands on the os, such as
@@ -40,26 +40,35 @@ abstract class Program{
 
     /**
      * Use this to initialize fields/properties
+     *
+     * When overriding, calling this super method always!!!! or else it will not work
      */
     abstract fun init()
 
     /**
-     * This will be called during os loading
+     * This will be called upon system shutdown
+     */
+    abstract fun shutdown()
+
+    /**
+     * This will be called during program initialization
+     *
+     * The nbt tag is taken from storage
      */
     abstract fun deserialize(nbt: NBTTagCompound)
 
     /**
-     * This will be called during os saving
+     * This will be called during program shutdown
      */
     abstract fun serialize(): NBTTagCompound
 }
 
 interface ProgramRenderer{
-    fun render(coords: RenderCoords, os: KattOS)
+    fun render(coords: RenderCoords, os: OperatingSystem)
 }
 
 data class RenderCoords(val x: Int, val y: Int, val mx: Int, val my: Int)
 
 interface ProgramFunction{
-    fun execute(os: KattOS): Boolean
+    fun execute(os: CouchOS): Boolean
 }

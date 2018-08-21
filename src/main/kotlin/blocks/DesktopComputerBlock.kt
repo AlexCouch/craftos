@@ -1,5 +1,10 @@
 package blocks
 
+import com.teamwizardry.librarianlib.features.autoregister.TileRegister
+import com.teamwizardry.librarianlib.features.base.block.tile.TileMod
+import com.teamwizardry.librarianlib.features.base.block.tile.TileModTickable
+import com.teamwizardry.librarianlib.features.saving.Savable
+import com.teamwizardry.librarianlib.features.saving.Save
 import modid
 import net.minecraft.block.Block
 import net.minecraft.block.material.Material
@@ -14,18 +19,21 @@ import net.minecraft.util.ResourceLocation
 import net.minecraft.util.math.BlockPos
 import net.minecraft.world.World
 import os.OperatingSystem
-import DevicesPlus
 import net.minecraft.block.ITileEntityProvider
+import net.minecraft.client.Minecraft
+import net.minecraft.client.multiplayer.WorldClient
 import net.minecraft.creativetab.CreativeTabs
+import net.minecraft.entity.EntityLivingBase
+import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTBase
-import net.minecraft.nbt.NBTException
-import net.minecraft.world.IBlockAccess
-import terminal.TerminalResponse
+import net.minecraftforge.fml.common.Mod
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
+import net.minecraftforge.fml.common.gameevent.TickEvent
+import stream
+import system.CouchDesktopSystem
+import terminal.messages.OpenTerminalGuiMessage
 
 object DesktopComputerBlock : Block(Material.IRON), ITileEntityProvider {
-    var beginStartup = false
-
-    var te: TileEntityDesktopComputer? = null
     init{
         val name = "desktop"
         this.unlocalizedName = name
@@ -33,38 +41,56 @@ object DesktopComputerBlock : Block(Material.IRON), ITileEntityProvider {
         this.setCreativeTab(CreativeTabs.MISC)
     }
 
-    override fun onBlockAdded(worldIn: World, pos: BlockPos, state: IBlockState) {
-        super.onBlockAdded(worldIn, pos, state)
-        te = TileEntityDesktopComputer(this)
-    }
-
     override fun onBlockActivated(worldIn: World, pos: BlockPos, state: IBlockState, playerIn: EntityPlayer, hand: EnumHand, facing: EnumFacing, hitX: Float, hitY: Float, hitZ: Float): Boolean {
-        if(worldIn.isRemote){
-            this.te?.startup(playerIn) //Calls the tile entity function 'startup" which is supposed to start the operating system and display a screen
+        if(!worldIn.isRemote && hand == EnumHand.MAIN_HAND){
+            if(playerIn is EntityPlayerMP){
+                val te = worldIn.getTileEntity(pos) ?: throw IllegalStateException("No tile entity placed! Report to author!")
+                if(te is TileEntityDesktopComputer){
+                    if(te.started){
+                        te.openGui()
+                    }else{
+                        te.startup(playerIn)
+                    }
+                }else{
+                    throw IllegalStateException("No desktop tile entity placed! What did you do??????")
+                }
+            }
         }
         return super.onBlockActivated(worldIn, pos, state, playerIn, hand, facing, hitX, hitY, hitZ)
     }
 
-    override fun createTileEntity(world: World?, state: IBlockState?): TileEntity = te ?: TileEntityDesktopComputer(this)
-    override fun createNewTileEntity(worldIn: World?, meta: Int): TileEntity? = te
+    override fun createNewTileEntity(worldIn: World, meta: Int): TileEntity = TileEntityDesktopComputer()
 
     override fun isFullCube(state: IBlockState?): Boolean = false
     override fun isOpaqueCube(state: IBlockState?): Boolean = false
 }
 
 
-class TileEntityDesktopComputer(val block: DesktopComputerBlock) : TileEntity(){
-    var commandResponse: TerminalResponse? = null
-    lateinit var os: OperatingSystem
-    val storage = NBTTagCompound()
+@Savable
+@TileRegister("desktop")
+class TileEntityDesktopComputer : TileMod(){
+    @Save
+    var os: OperatingSystem? = null
 
-    fun startup(player: EntityPlayer){
+    @Save
+    val storage = NBTTagCompound()
+    @Save
+    var system: CouchDesktopSystem? = null
+    @Save
+    var started = false
+
+    fun startup(player: EntityPlayerMP){
+        if(started) return
         println("Starting system...")
-        player.openGui(DevicesPlus, 0, this.world, this.pos.x, this.pos.y, this.pos.z)
+        system = CouchDesktopSystem(this)
+        system?.player = player
+        started = true
+        this.system?.start()
+        markDirty()
     }
 
-    fun postCommandResponse(response: TerminalResponse){
-        commandResponse = response
+    fun openGui(){
+        stream.sendTo(OpenTerminalGuiMessage(this.pos), this.system?.player!!)
     }
 
     fun writeToStorage(name: String, nbt: NBTBase){
@@ -87,11 +113,5 @@ class TileEntityDesktopComputer(val block: DesktopComputerBlock) : TileEntity(){
             return storage.getTag(name)
         }
         throw IllegalArgumentException("No such tag in storage: $name")
-    }
-
-    override fun writeToNBT(compound: NBTTagCompound): NBTTagCompound {
-        super.writeToNBT(compound)
-        compound.setTag("storage", storage)
-        return compound
     }
 }

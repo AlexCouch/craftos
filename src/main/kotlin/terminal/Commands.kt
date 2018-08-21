@@ -2,48 +2,36 @@ package terminal
 
 import modid
 import net.minecraft.entity.player.EntityPlayerMP
-import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util.ResourceLocation
 import os.OperatingSystem
 
-val commands = HashMap<String, TerminalCommand>()
-
 interface TerminalCommand{
     val name: ResourceLocation
-    val execution: (EntityPlayerMP, OperatingSystem, Array<String>) -> TerminalResponse?
-    fun serialize(): NBTTagCompound
-    fun deserialize(nbt: NBTTagCompound)
+    val execute: (EntityPlayerMP, OperatingSystem, Array<String>) -> Unit
 }
 
 object EchoCommand : TerminalCommand{
     override val name: ResourceLocation
         get() = ResourceLocation(modid, "echo")
-    override val execution: (EntityPlayerMP, OperatingSystem, Array<String>) -> TerminalResponse?
+    override val execute: (EntityPlayerMP, OperatingSystem, Array<String>) -> Unit
         get() = {_, _, args ->
             val sb = StringBuilder()
-            args.forEach {
-                sb.append("$it ")
+            args.forEachIndexed { i, s ->
+                sb.append("$s${if(i == args.size-1) " " else ""}")
             }
-            TerminalResponse(0, sb.toString())
         }
-
-    override fun serialize(): NBTTagCompound = NBTTagCompound()
-    override fun deserialize(nbt: NBTTagCompound) {}
 }
 
 object ClearCommand : TerminalCommand{
     override val name: ResourceLocation
         get() = ResourceLocation(modid, "clear")
-    override val execution: (EntityPlayerMP, OperatingSystem, Array<String>) -> TerminalResponse?
-        get() = {_,_, _ ->
-            TerminalStream.terminal.modifyTerminalHistory {
-                it.clear()
+    override val execute: (EntityPlayerMP, OperatingSystem, Array<String>) -> Unit
+        get() = {_,os, _ ->
+            if(os.terminal is CouchTerminal){
+                val terminal = os.terminal as CouchTerminal
+                terminal.client.modifyTerminalHistory {
+                    it.clear()
+                }
             }
-            null
         }
-
-    override fun serialize(): NBTTagCompound = NBTTagCompound()
-    override fun deserialize(nbt: NBTTagCompound) {
-    }
-
 }

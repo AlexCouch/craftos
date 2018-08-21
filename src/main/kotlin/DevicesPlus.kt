@@ -14,15 +14,14 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.common.network.NetworkRegistry
 import net.minecraftforge.fml.common.registry.GameRegistry
 import net.minecraftforge.fml.relauncher.Side
-import terminal.ClearCommand
-import terminal.EchoCommand
-import terminal.TerminalStream
+import terminal.*
 import terminal.messages.*
-import terminal.registerTerminalCommand
 
 const val modid = "devices+"
 const val name = "Devices Plus"
 const val version = "0.1"
+
+val stream = NetworkRegistry.INSTANCE.newSimpleChannel("general")
 
 @Mod(modid=modid, name=name, version=version, modLanguageAdapter = "net.shadowfacts.forgelin.KotlinAdapter")
 object DevicesPlus{
@@ -37,21 +36,8 @@ object DevicesPlus{
 
     @Mod.EventHandler
     fun init(event: FMLInitializationEvent){
-        GameRegistry.registerTileEntity(TileEntityDesktopComputer::class.java, "desktop")
-        registerNetworking()
+        stream.registerMessage(openTerminalGuiMessageHandler, OpenTerminalGuiMessage::class.java, 0, Side.CLIENT)
     }
-
-    @Mod.EventHandler
-    fun serverStarting(event: FMLServerStartingEvent){
-        registerTerminalCommand(EchoCommand, ClearCommand)
-    }
-}
-
-fun registerNetworking(){
-    TerminalStream.streamNetwork.registerMessage(terminalExecuteCommandMessage, TerminalExecuteCommandMessage::class.java, 0, Side.SERVER)
-    TerminalStream.streamNetwork.registerMessage(terminalCommandResponseToClient, TerminalCommandResponseToClient::class.java, 1, Side.CLIENT)
-    TerminalStream.streamNetwork.registerMessage(saveTermHistoryInStorageHandler, SaveTermHistoryInMemory::class.java, 2, Side.SERVER)
-    TerminalStream.streamNetwork.registerMessage(loadTermHistoryInStorageHandler, LoadTermHistoryInStorageMessage::class.java, 3, Side.CLIENT)
 }
 
 @Mod.EventBusSubscriber(modid=modid)

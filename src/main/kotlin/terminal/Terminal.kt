@@ -1,43 +1,73 @@
 package terminal
 
+import blocks.DesktopComputerBlock
 import client.TerminalScreen
 import net.minecraft.entity.player.EntityPlayerMP
+import net.minecraft.nbt.NBTTagCompound
 import net.minecraftforge.fml.common.network.NetworkRegistry
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage
+import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper
+import net.minecraftforge.fml.relauncher.Side
 import os.OperatingSystem
-import terminal.messages.TerminalCommandResponseToClient
-import terminal.messages.TerminalExecuteCommandMessage
+import os.couch.CouchOS
+import programs.Program
+import programs.ProgramFunction
+import programs.ProgramRenderer
+import terminal.messages.*
 
-fun registerTerminalCommand(vararg _commands: TerminalCommand){
-    for(command in _commands){
-        commands[command.name.resourcePath] = command
-    }
+abstract class Terminal{
+    abstract val commands: ArrayList<TerminalCommand>
+    abstract val stream: SimpleNetworkWrapper
+    abstract val client: TerminalScreen
+    abstract fun registerCommand(command: TerminalCommand)
+    abstract fun sendCommand(commandName: String, commandArgs: Array<String>)
+    abstract fun getCommand(name: String): TerminalCommand
+    abstract fun executeCommand(executor: EntityPlayerMP, command: TerminalCommand, os: OperatingSystem, args: Array<String>)
+    abstract fun sendMessageToServer(message: IMessage)
+    abstract fun sendMessageToClient(message: IMessage, player: EntityPlayerMP)
+    abstract fun printString(string: String, player: EntityPlayerMP)
+    abstract fun start()
 }
 
-object TerminalStream{
-    internal val streamNetwork = NetworkRegistry.INSTANCE.newSimpleChannel("terminal_stream")
-    lateinit var terminal: TerminalScreen
-    internal lateinit var response: TerminalResponse
+class CouchTerminal(gui: TerminalScreen) : Terminal(){
+    override val commands: ArrayList<TerminalCommand>
+        get() = arrayListOf()
 
-    fun sendMessageToServer(message: IMessage){
-        streamNetwork.sendToServer(message)
+    override val stream: SimpleNetworkWrapper = NetworkRegistry.INSTANCE.newSimpleChannel("terminal_stream")
+    override val client: TerminalScreen = gui
+
+    override fun registerCommand(command: TerminalCommand) {
+        this.commands + command
     }
 
-    fun sendMessageToClient(message: IMessage, player: EntityPlayerMP){
-        streamNetwork.sendTo(message, player)
+    override fun getCommand(name: String): TerminalCommand = commands.filter { it.name.resourcePath == name }[0]
+
+    override fun printString(string: String, player: EntityPlayerMP) {
+        this.sendMessageToClient(DisplayStringOnTerminal(string, client.te.pos), player)
     }
 
-    fun sendCommand(commandName: String, commandArgs: Array<String>){
-        val message = TerminalExecuteCommandMessage()
-        message.command = commandName
-        message.args = commandArgs
-        streamNetwork.sendToServer(message)
+    override fun sendMessageToServer(message: IMessage){
+        stream.sendToServer(message)
     }
 
-    fun executeCommand(executor: EntityPlayerMP, command: TerminalCommand, os: OperatingSystem, args: Array<String>){
+    override fun sendMessageToClient(message: IMessage, player: EntityPlayerMP){
+        stream.sendTo(message, player)
+    }
+
+    override fun sendCommand(commandName: String, commandArgs: Array<String>){
+        stream.sendToServer(TerminalExecuteCommandMessage(commandName, commandArgs, client.te.pos))
+    }
+
+    override fun executeCommand(executor: EntityPlayerMP, command: TerminalCommand, os: OperatingSystem, args: Array<String>){
         println("Executing command: ${command.name}")
-        response = command.execution(executor, os, args) ?: return
+        command.execute(executor, os, args)
+    }
+
+    override fun start() {
+        commands.addAll(arrayListOf(EchoCommand, ClearCommand))
+        this.stream.registerMessage(terminalExecuteCommandMessage, TerminalExecuteCommandMessage::class.java, 0, Side.SERVER)
+        this.stream.registerMessage(saveTermHistoryInStorageHandler, SaveTermHistoryInMemory::class.java, 2, Side.SERVER)
+        this.stream.registerMessage(loadTermHistoryInStorageHandler, LoadTermHistoryInStorageMessage::class.java, 3, Side.CLIENT)
+        this.stream.registerMessage(displayStringOnTerminalHandler, DisplayStringOnTerminal::class.java, 4, Side.CLIENT)
     }
 }
-
-data class TerminalResponse(val code: Int, val message: String)
