@@ -1,6 +1,5 @@
 package os
 
-import com.teamwizardry.librarianlib.features.saving.Savable
 import net.minecraft.nbt.NBTTagCompound
 import network.Port
 import os.components.OSComponent
@@ -9,7 +8,6 @@ import programs.Program
 import terminal.Terminal
 import pkg.Package
 
-@Savable
 interface OperatingSystem{
     val name: String
     val apps: Set<Program>

@@ -5,44 +5,38 @@ import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.nbt.NBTTagCompound
 import os.OperatingSystem
 import DevicesPlus
-import com.teamwizardry.librarianlib.features.base.block.tile.TileMod
-import com.teamwizardry.librarianlib.features.saving.Savable
-import com.teamwizardry.librarianlib.features.saving.Save
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiScreen
 import net.minecraft.nbt.NBTUtil
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.util.text.TextComponentString
 import net.minecraftforge.fml.client.config.GuiUtils
+import net.minecraftforge.fml.common.FMLCommonHandler
+import net.minecraftforge.fml.server.FMLServerHandler
 import network.Port
 import os.couch.CouchOS
 import stream
 import terminal.CouchTerminal
+import terminal.Terminal
 import terminal.messages.OpenTerminalGuiMessage
 
-@Savable
 class CouchDesktopSystem(val desktop: TileEntityDesktopComputer) : DeviceSystem<TileEntityDesktopComputer>{
-    override val os: OperatingSystem? = desktop.os
-    override val memory = Memory(10000, NBTTagCompound())
-    override val storage: NBTTagCompound
-    get(){
-        val tag = NBTTagCompound()
-        tag.setString("name", this.name)
-        tag.setTag("os", os?.serializeOS() ?: NBTTagCompound())
-        tag.setTag("pos", NBTUtil.createPosTag(desktop.pos)) //Might be useful later
-        return tag
-    }
-    override val name = "couch_desktop"
-    override val te: TileEntityDesktopComputer = desktop
-    override val ports: List<Port<*>> = ArrayList()
+    override var os: OperatingSystem? = desktop.os
+    override var memory = Memory(10000, NBTTagCompound())
+    override var storage: NBTTagCompound = NBTTagCompound()
+    override var name = "couch_desktop"
+    override var te: TileEntityDesktopComputer = desktop
+    override var ports: List<Port<*>> = ArrayList()
+    override var terminal: Terminal = CouchTerminal()
 
-    lateinit var player: EntityPlayerMP
+    val player by lazy { desktop.player!! }
 
     override fun shutdown() {
         //Shutdown applications, wait til all have shutdown, and clear memory
         val programNBT = NBTTagCompound()
+        val os1 = this.os!! //Smart cast fails due to mutability
         if(this.os?.apps != null){
-            for(program in this.os.apps){
+            for(program in os1.apps){
                 programNBT.setTag("programs", program.serialize())
                 program.shutdown()
             }
@@ -54,11 +48,36 @@ class CouchDesktopSystem(val desktop: TileEntityDesktopComputer) : DeviceSystem<
     override fun start() {
         //load up ROM, and check all hardware for faults
         this.player.sendStatusMessage(TextComponentString("System started..."), true)
+        desktop.openGui()
+    }
+
+    override fun serialize(): NBTTagCompound {
+        val tag = NBTTagCompound()
+        tag.setString("name", this.name)
+//        tag.setTag("os", os?.serializeOS() ?: NBTTagCompound())
+        tag.setTag("memory", this.memory.serialize())
+        return tag
+    }
+
+    override fun deserialize(nbt: NBTTagCompound) {
+        if(
+                nbt.hasKey("name") &&
+                nbt.hasKey("memory") &&
+                nbt.hasKey("pos")
+        ){
+            this.name = nbt.getString("name")
+            val memorytag = nbt.getTag("memory") as NBTTagCompound
+            if(memorytag.hasKey("space") && memorytag.hasKey("storedMemory")){
+                val space = memorytag.getLong("space")
+                val storedMemory = memorytag.getTag("storedMemory") as NBTTagCompound
+                val memory = Memory(space, storedMemory)
+                this.memory = memory
+            }
+        }
     }
 }
 
-@Savable
-class Memory(@Save val space: Long, @Save var storedMemory: NBTTagCompound){
+class Memory(val space: Long, var storedMemory: NBTTagCompound){
     init{
         prepareMemory()
     }
@@ -129,28 +148,31 @@ class Memory(@Save val space: Long, @Save var storedMemory: NBTTagCompound){
         storedMemory = NBTTagCompound()
         prepareMemory()
     }
+
+    fun serialize(): NBTTagCompound{
+        val nbt = NBTTagCompound()
+        nbt.setLong("space", this.space)
+        nbt.setTag("memory", this.storedMemory)
+        return nbt
+    }
 }
 
-@Savable
-interface DeviceSystem<T : TileMod>{
-    @Save
-    val name: String
-    @Save
-    val memory: Memory
-    @Save
-    val storage: NBTTagCompound
+interface DeviceSystem<T : TileEntity>{
+    var name: String
+    var memory: Memory
+    var storage: NBTTagCompound
     /**
      * This is nullable because of kernels (which will be implemented later on)
      */
-    @Save
-    val os: OperatingSystem?
-    @Save
-    val te: T
-    @Save
-    val ports: List<Port<*>>
+    var os: OperatingSystem?
+    var te: T
+    var ports: List<Port<*>>
+    var terminal: Terminal
 
     fun start()
     //TODO: Create system phases
 //    fun idle()
     fun shutdown()
+    fun serialize(): NBTTagCompound
+    fun deserialize(nbt: NBTTagCompound)
 }

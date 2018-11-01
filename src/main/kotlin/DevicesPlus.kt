@@ -4,6 +4,7 @@ import client.GuiRegistry
 import net.minecraft.block.Block
 import net.minecraft.item.Item
 import net.minecraft.item.ItemBlock
+import net.minecraft.tileentity.TileEntity
 import net.minecraftforge.event.RegistryEvent
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.SidedProxy
@@ -37,6 +38,8 @@ object DevicesPlus{
     @Mod.EventHandler
     fun init(event: FMLInitializationEvent){
         stream.registerMessage(openTerminalGuiMessageHandler, OpenTerminalGuiMessage::class.java, 0, Side.CLIENT)
+        stream.registerMessage(startTerminalMessageHandler, StartTerminalMessage::class.java, 1, Side.SERVER)
+        TileEntity.register("desktop_computer", TileEntityDesktopComputer::class.java)
     }
 }
 

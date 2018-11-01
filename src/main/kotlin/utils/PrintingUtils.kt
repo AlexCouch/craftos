@@ -1,19 +1,19 @@
 package utils
 
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.entity.player.EntityPlayerMP
+import net.minecraftforge.fml.common.FMLCommonHandler
+import net.minecraftforge.fml.relauncher.Side
 import terminal.Terminal
 import java.io.OutputStream
 import java.io.PrintStream
 
-class TerminalPrintStream(var parentStream: PrintStream, val terminal: Terminal) : PrintStream(parentStream) {
-    override fun print(s: String) {
-        super.print(s)
-        parentStream.print(s)
-        terminal.printString(s, terminal.client.te.system!!.player)
-    }
+fun printstr(string: String, terminal: Terminal? = null){
+    print(string)
+    terminal?.client?.printToScreen(string)
+}
 
-    override fun println(s: String) {
-        super.print(s)
-        parentStream.println(s)
-        terminal.printString("$s\n", terminal.client.te.system!!.player)
-    }
+fun printlnstr(string: String, terminal: Terminal? = null){
+    println(string)
+    terminal?.client?.printToScreen("$string\n")
 }

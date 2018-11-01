@@ -1,10 +1,5 @@
 package blocks
 
-import com.teamwizardry.librarianlib.features.autoregister.TileRegister
-import com.teamwizardry.librarianlib.features.base.block.tile.TileMod
-import com.teamwizardry.librarianlib.features.base.block.tile.TileModTickable
-import com.teamwizardry.librarianlib.features.saving.Savable
-import com.teamwizardry.librarianlib.features.saving.Save
 import modid
 import net.minecraft.block.Block
 import net.minecraft.block.material.Material
@@ -26,6 +21,9 @@ import net.minecraft.creativetab.CreativeTabs
 import net.minecraft.entity.EntityLivingBase
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTBase
+import net.minecraft.network.NetworkManager
+import net.minecraft.network.play.server.SPacketUpdateTileEntity
+import net.minecraftforge.fml.common.FMLCommonHandler
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.common.gameevent.TickEvent
@@ -43,17 +41,16 @@ object DesktopComputerBlock : Block(Material.IRON), ITileEntityProvider {
 
     override fun onBlockActivated(worldIn: World, pos: BlockPos, state: IBlockState, playerIn: EntityPlayer, hand: EnumHand, facing: EnumFacing, hitX: Float, hitY: Float, hitZ: Float): Boolean {
         if(!worldIn.isRemote && hand == EnumHand.MAIN_HAND){
-            if(playerIn is EntityPlayerMP){
-                val te = worldIn.getTileEntity(pos) ?: throw IllegalStateException("No tile entity placed! Report to author!")
-                if(te is TileEntityDesktopComputer){
-                    if(te.started){
-                        te.openGui()
-                    }else{
-                        te.startup(playerIn)
-                    }
-                }else{
-                    throw IllegalStateException("No desktop tile entity placed! What did you do??????")
+            val te = worldIn.getTileEntity(pos) ?: throw IllegalStateException("No tile entity placed! Report to author!")
+            if(te is TileEntityDesktopComputer){
+                if (te.started) {
+                    te.openGui()
+                } else {
+                    te.player = playerIn as EntityPlayerMP
+                    te.startup()
                 }
+            }else{
+                throw IllegalStateException("No desktop tile entity placed! What did you do??????")
             }
         }
         return super.onBlockActivated(worldIn, pos, state, playerIn, hand, facing, hitX, hitY, hitZ)
@@ -65,32 +62,35 @@ object DesktopComputerBlock : Block(Material.IRON), ITileEntityProvider {
     override fun isOpaqueCube(state: IBlockState?): Boolean = false
 }
 
-
-@Savable
-@TileRegister("desktop")
-class TileEntityDesktopComputer : TileMod(){
-    @Save
+class TileEntityDesktopComputer : TileEntity(){
     var os: OperatingSystem? = null
 
-    @Save
-    val storage = NBTTagCompound()
-    @Save
-    var system: CouchDesktopSystem? = null
-    @Save
+    var storage = NBTTagCompound()
     var started = false
+    var player: EntityPlayer? = null
+    val system: CouchDesktopSystem
+        get() = CouchDesktopSystem(this)
 
-    fun startup(player: EntityPlayerMP){
+    fun startup(){
         if(started) return
-        println("Starting system...")
-        system = CouchDesktopSystem(this)
-        system?.player = player
         started = true
-        this.system?.start()
+        started = true
+        this.system.start()
+        val blockstate = this.world.getBlockState(this.pos)
+        this.world.notifyBlockUpdate(this.pos, blockstate, blockstate, 3)
+        this.world.scheduleBlockUpdate(this.pos, this.blockType, 0, 0)
         markDirty()
     }
 
+    override fun getUpdatePacket(): SPacketUpdateTileEntity? = SPacketUpdateTileEntity(this.pos, 3, this.updateTag)
+    override fun getUpdateTag(): NBTTagCompound = this.serializeNBT()
+    override fun onDataPacket(net: NetworkManager, pkt: SPacketUpdateTileEntity) {
+        super.onDataPacket(net, pkt)
+        handleUpdateTag(pkt.nbtCompound)
+    }
+
     fun openGui(){
-        stream.sendTo(OpenTerminalGuiMessage(this.pos), this.system?.player!!)
+        stream.sendTo(OpenTerminalGuiMessage(this.pos), this.system.player as EntityPlayerMP)
     }
 
     fun writeToStorage(name: String, nbt: NBTBase){
@@ -113,5 +113,25 @@ class TileEntityDesktopComputer : TileMod(){
             return storage.getTag(name)
         }
         throw IllegalArgumentException("No such tag in storage: $name")
+    }
+
+    override fun deserializeNBT(nbt: NBTTagCompound) {
+        super.deserializeNBT(nbt)
+        if(this.started) {
+            if (nbt.hasKey("system") && nbt.hasKey("storage")) {
+                this.storage = nbt.getCompoundTag("storage")
+                val system = nbt.getCompoundTag("system")
+                this.system.deserialize(system)
+            }
+        }
+    }
+
+    override fun serializeNBT(): NBTTagCompound {
+        val nbt = super.serializeNBT()
+        if(this.started){
+            nbt.setTag("system", this.system.serialize())
+            nbt.setTag("storage", this.storage)
+        }
+        return nbt
     }
 }

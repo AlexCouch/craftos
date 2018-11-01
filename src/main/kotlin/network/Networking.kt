@@ -25,7 +25,7 @@ abstract class Port<T>(
 class NetworkPort(
         override val portId: Int,
         val system: CouchDesktopSystem
-) : Port<SystemNetwork>(portId, SystemNetwork(system.player, system)){
+) : Port<SystemNetwork>(portId, SystemNetwork(system.player as EntityPlayerMP, system)){
     override fun start(){
         Executors.newScheduledThreadPool(1).scheduleAtFixedRate({
             this.t.scanForRouters(system.desktop.pos)

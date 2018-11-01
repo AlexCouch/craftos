@@ -43,13 +43,9 @@ class TerminalExecuteCommandMessage() : IMessage{
         }
         this.args = argsArr.toTypedArray()
         this.pos = NBTUtil.getPosFromTag(ByteBufUtils.readTag(buf) ?: return)
-        println(this.command)
-        println(this.args.toString())
     }
 
     override fun toBytes(buf: ByteBuf) {
-        println(this.command)
-        println(this.args.toString())
         ByteBufUtils.writeUTF8String(buf, command)
         val argsTag = NBTTagList()
         args.forEachIndexed{ index, str ->
@@ -80,13 +76,9 @@ class SaveTermHistoryInMemory() : IMessage{
     override fun fromBytes(buf: ByteBuf) {
         this.data = ByteBufUtils.readTag(buf) ?: return
         this.pos = NBTUtil.getPosFromTag(ByteBufUtils.readTag(buf) ?: return)
-        println(this.data)
-        println(this.pos)
     }
 
     override fun toBytes(buf: ByteBuf) {
-        println(this.data)
-        println(this.pos)
         ByteBufUtils.writeTag(buf, this.data)
         ByteBufUtils.writeTag(buf, NBTUtil.createPosTag(pos))
     }
@@ -104,11 +96,9 @@ class LoadTermHistoryInStorageMessage() : IMessage{
     override fun fromBytes(buf: ByteBuf) {
         this.nbt = ByteBufUtils.readTag(buf) ?: NBTTagCompound()
         this.pos = NBTUtil.getPosFromTag(ByteBufUtils.readTag(buf) ?: return)
-        println(this.nbt)
     }
 
     override fun toBytes(buf: ByteBuf) {
-        println(this.nbt)
         ByteBufUtils.writeTag(buf, this.nbt)
         ByteBufUtils.writeTag(buf, NBTUtil.createPosTag(this.pos))
     }
@@ -153,9 +143,27 @@ class OpenTerminalGuiMessage(): IMessage{
     }
 }
 
+class StartTerminalMessage(): IMessage{
+    lateinit var blockpos: BlockPos
+
+    constructor(blockpos: BlockPos): this(){
+        this.blockpos = blockpos
+    }
+
+    override fun fromBytes(buf: ByteBuf){
+        this.blockpos = NBTUtil.getPosFromTag(ByteBufUtils.readTag(buf) ?: NBTTagCompound())
+    }
+
+    override fun toBytes(buf: ByteBuf){
+        ByteBufUtils.writeTag(buf, NBTUtil.createPosTag(this.blockpos))
+    }
+}
+
 fun getCurrentComputer(ctx: MessageContext, pos: BlockPos, side: Side): TileEntityDesktopComputer{
     val world = if(side == Side.SERVER) ctx.serverHandler.player.world else Minecraft.getMinecraft().world
-    return world.getTileEntity(pos) as TileEntityDesktopComputer
+    val te = world.getTileEntity(pos) as TileEntityDesktopComputer
+    te.player = if(side == Side.SERVER) ctx.serverHandler.player else Minecraft.getMinecraft().player
+    return te
 }
 
 val saveTermHistoryInStorageHandler = IMessageHandler<SaveTermHistoryInMemory, LoadTermHistoryInStorageMessage>{ msg, ctx ->
@@ -163,7 +171,7 @@ val saveTermHistoryInStorageHandler = IMessageHandler<SaveTermHistoryInMemory, L
     termHistory.setTag("terminal_history", msg.data)
     termHistory.setString("name", "terminal_history")
     val te = getCurrentComputer(ctx, msg.pos, Side.SERVER)
-    LoadTermHistoryInStorageMessage(te.system!!.memory.referenceTo("terminal_history"), msg.pos)
+    LoadTermHistoryInStorageMessage(te.system.memory.pointerTo("terminal_history"), msg.pos)
 }
 
 val loadTermHistoryInStorageHandler = IMessageHandler<LoadTermHistoryInStorageMessage, IMessage>{ msg, ctx ->
@@ -173,29 +181,34 @@ val loadTermHistoryInStorageHandler = IMessageHandler<LoadTermHistoryInStorageMe
         history.add((it as NBTTagString).string)
     }
     val te = getCurrentComputer(ctx, msg.pos, Side.CLIENT)
-    val system = te.system!!
+    val system = te.system
     system.os?.terminal?.client?.loadTerminalHistory(history)
     null
 }
 
 val terminalExecuteCommandMessage = IMessageHandler <TerminalExecuteCommandMessage, IMessage>{ msg, ctx ->
-    val world = ctx.serverHandler.player.world
-    val te = world.getTileEntity(msg.pos) as TileEntityDesktopComputer
+    val te = getCurrentComputer(ctx, msg.pos, ctx.side)
     val system = te.system
-    val terminal = system?.os?.terminal!!
+    val terminal = system.terminal
     val command = terminal.getCommand(msg.command)
-    terminal.executeCommand(ctx.serverHandler.player, command, system.os, msg.args)
+    terminal.executeCommand(ctx.serverHandler.player, command, msg.args)
     null
 }
 
 val displayStringOnTerminalHandler = IMessageHandler<DisplayStringOnTerminal, IMessage>{ msg, ctx ->
     val te = getCurrentComputer(ctx, msg.pos, Side.CLIENT)
-    te.os?.terminal!!.client.modifyTerminalHistory { it.add(msg.message) }
+    te.os?.terminal!!.client?.printToScreen(msg.message)
     null
 }
 
 val openTerminalGuiMessageHandler = IMessageHandler<OpenTerminalGuiMessage, IMessage>{ msg, ctx ->
     val player = Minecraft.getMinecraft().player
     player.openGui(DevicesPlus, 0, Minecraft.getMinecraft().world, msg.pos.x, msg.pos.y, msg.pos.z)
+    null
+}
+
+val startTerminalMessageHandler = IMessageHandler<StartTerminalMessage, IMessage>{ msg, ctx ->
+    val comp = getCurrentComputer(ctx, msg.blockpos, ctx.side)
+    comp.system.terminal.start(ctx.serverHandler.player)
     null
 }
