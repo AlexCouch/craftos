@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin = '1.2.41'
+    ext.kotlin = '1.2.71'
     repositories {
         jcenter()
         maven { url = "http://files.minecraftforge.net/maven" }
@@ -14,7 +14,7 @@ apply plugin: 'net.minecraftforge.gradle.forge'
 apply plugin: 'idea'
 
 version = "1.0"
-group = "alexcouch.device+" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
+group = "alexcouch.craftos" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = "modid"
 
 sourceCompatibility = targetCompatibility = '1.8' // Need this here so eclipse task generates correctly.
@@ -38,7 +38,6 @@ minecraft {
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin"
     compile "net.shadowfacts:Forgelin:1.6.0"
-    compile "com.mrcrayfish:device-api:0.4.0-1.12.2"
 }
 
 processResources {

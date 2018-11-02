@@ -1,33 +1,26 @@
 package system
 
 import blocks.TileEntityDesktopComputer
-import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.nbt.NBTTagCompound
 import os.OperatingSystem
-import DevicesPlus
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiScreen
-import net.minecraft.nbt.NBTUtil
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.util.text.TextComponentString
-import net.minecraftforge.fml.client.config.GuiUtils
-import net.minecraftforge.fml.common.FMLCommonHandler
-import net.minecraftforge.fml.server.FMLServerHandler
 import network.Port
 import os.couch.CouchOS
+import DevicesPlus
+import net.minecraft.entity.player.EntityPlayerMP
 import stream
-import terminal.CouchTerminal
-import terminal.Terminal
-import terminal.messages.OpenTerminalGuiMessage
+import terminal.messages.*
+import os.*
 
 class CouchDesktopSystem(val desktop: TileEntityDesktopComputer) : DeviceSystem<TileEntityDesktopComputer>{
-    override var os: OperatingSystem? = desktop.os
+    override var os: OperatingSystem? = CouchOS(this)
     override var memory = Memory(10000, NBTTagCompound())
     override var storage: NBTTagCompound = NBTTagCompound()
     override var name = "couch_desktop"
     override var te: TileEntityDesktopComputer = desktop
     override var ports: List<Port<*>> = ArrayList()
-    override var terminal: Terminal = CouchTerminal()
 
     val player by lazy { desktop.player!! }
 
@@ -42,19 +35,18 @@ class CouchDesktopSystem(val desktop: TileEntityDesktopComputer) : DeviceSystem<
             }
         }
         memory.clear()
-        Minecraft.getMinecraft().displayGuiScreen(null)
     }
 
     override fun start() {
         //load up ROM, and check all hardware for faults
         this.player.sendStatusMessage(TextComponentString("System started..."), true)
-        desktop.openGui()
+        stream.sendTo(StartOSBootMessage(this.desktop.pos), this.player as EntityPlayerMP)
     }
 
     override fun serialize(): NBTTagCompound {
         val tag = NBTTagCompound()
         tag.setString("name", this.name)
-//        tag.setTag("os", os?.serializeOS() ?: NBTTagCompound())
+        tag.setTag("os", os?.serializeOS() ?: NBTTagCompound())
         tag.setTag("memory", this.memory.serialize())
         return tag
     }
@@ -63,7 +55,7 @@ class CouchDesktopSystem(val desktop: TileEntityDesktopComputer) : DeviceSystem<
         if(
                 nbt.hasKey("name") &&
                 nbt.hasKey("memory") &&
-                nbt.hasKey("pos")
+                nbt.hasKey("os")
         ){
             this.name = nbt.getString("name")
             val memorytag = nbt.getTag("memory") as NBTTagCompound
@@ -73,6 +65,8 @@ class CouchDesktopSystem(val desktop: TileEntityDesktopComputer) : DeviceSystem<
                 val memory = Memory(space, storedMemory)
                 this.memory = memory
             }
+            val osnbt = nbt.getCompoundTag("os")
+            this.os?.deserializeOS(osnbt)
         }
     }
 }
@@ -167,7 +161,6 @@ interface DeviceSystem<T : TileEntity>{
     var os: OperatingSystem?
     var te: T
     var ports: List<Port<*>>
-    var terminal: Terminal
 
     fun start()
     //TODO: Create system phases

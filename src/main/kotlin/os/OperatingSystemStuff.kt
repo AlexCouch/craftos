@@ -1,35 +1,37 @@
 package os
 
+import client.SystemScreen
 import net.minecraft.nbt.NBTTagCompound
 import network.Port
-import os.components.OSComponent
-import os.components.OSLayout
+import os.filesystem.FileSystem
 import programs.Program
+import system.DeviceSystem
 import terminal.Terminal
-import pkg.Package
+import utils.printstr
 
 interface OperatingSystem{
     val name: String
     val apps: Set<Program>
+    val fileSystem: FileSystem
     val terminal: Terminal
-    val environment: OSInterface?
     val ports: ArrayList<Port<*>>
-    val packages: ArrayList<Package>
+    val screen: SystemScreen?
+    val system: DeviceSystem<*>
 
     fun start()
-    fun registerPackage(pack: pkg.Package)
     fun serializeOS(): NBTTagCompound
     fun deserializeOS(nbt: NBTTagCompound)
     /**
      * Will mostly be used to check if ports are functioning correctly; mostly internal
      */
-    fun getNextAvailablePort(): Port<*>{
+    fun getNextAvailablePort(): Port<*>?{
         for(port in this.ports){
             if(port.available){
                 return port
             }
         }
-        throw RuntimeException(IllegalStateException("There are no ports available!"))
+        printstr("There are no ports available!", this.terminal)
+        return null
     }
 
     /**
@@ -37,7 +39,7 @@ interface OperatingSystem{
      *
      * This is what you want most of the time
      */
-    fun getNextAvailablePort(including: Class<*>): Port<*>{
+    fun getNextAvailablePort(including: Class<*>): Port<*>?{
         for(port in this.ports){
             if(port.available){
                 if(port::class.java == including){
@@ -45,13 +47,7 @@ interface OperatingSystem{
                 }
             }
         }
-        throw RuntimeException(IllegalStateException("No available port of type: ${including.canonicalName}"))
+        printstr("No available port of type: ${including.canonicalName}")
+        return null
     }
 }
-
-interface OSInterface{
-    val components: ArrayList<OSComponent>
-    val os: OperatingSystem
-    fun render(os: OperatingSystem, layout: OSLayout)
-}
-

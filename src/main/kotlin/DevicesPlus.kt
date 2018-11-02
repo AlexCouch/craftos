@@ -10,12 +10,9 @@ import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.SidedProxy
 import net.minecraftforge.fml.common.event.FMLInitializationEvent
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent
-import net.minecraftforge.fml.common.event.FMLServerStartingEvent
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.common.network.NetworkRegistry
-import net.minecraftforge.fml.common.registry.GameRegistry
 import net.minecraftforge.fml.relauncher.Side
-import terminal.*
 import terminal.messages.*
 
 const val modid = "devices+"
@@ -39,6 +36,9 @@ object DevicesPlus{
     fun init(event: FMLInitializationEvent){
         stream.registerMessage(openTerminalGuiMessageHandler, OpenTerminalGuiMessage::class.java, 0, Side.CLIENT)
         stream.registerMessage(startTerminalMessageHandler, StartTerminalMessage::class.java, 1, Side.SERVER)
+        stream.registerMessage(changeScreenModeMessageHandler, ChangeScreenModeMessage::class.java, 2, Side.CLIENT)
+        stream.registerMessage(startOSBootMessageHandler, StartOSBootMessage::class.java, 3, Side.CLIENT)
+        stream.registerMessage(initializeOSMessageHandler, InitializeOSMessage::class.java, 4, Side.SERVER)
         TileEntity.register("desktop_computer", TileEntityDesktopComputer::class.java)
     }
 }

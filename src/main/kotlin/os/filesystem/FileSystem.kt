@@ -1,0 +1,161 @@
+package os.filesystem
+
+import net.minecraft.nbt.NBTTagCompound
+import os.OperatingSystem
+import utils.printstr
+
+class FileSystem(private val os: OperatingSystem){
+    private val root = Folder("root", NBTTagCompound())
+    var currentDirectory = root
+        private set
+
+    fun relocate(dirName: String): Boolean{
+        if(dirName == "..") currentDirectory = currentDirectory.parent ?: return false
+        if(currentDirectory.files.stream().anyMatch { it.name == dirName }){
+            val new = currentDirectory.files.stream().filter { it.name == dirName }.findFirst().get()
+            if(new is Folder){
+                currentDirectory = new
+                return true
+            }
+            printstr("$dirName is not a directory; rel cancelled!", this.os.terminal)
+            return false
+        }
+        printstr("$dirName does not exist in current directory!", this.os.terminal)
+        return false
+    }
+
+    fun makeDirectory(dirName: String, callback: (() -> NBTTagCompound)?): Boolean{
+        if(currentDirectory.files.stream().anyMatch { it.name == dirName }){
+            printstr("File with name '$dirName' already exists.", this.os.terminal)
+            return false
+        }
+        val data = callback?.invoke() ?: NBTTagCompound()
+        this.currentDirectory + Folder(dirName, data)
+        return true
+    }
+
+    fun makeDirectory(dirName: String) = makeDirectory(dirName, null)
+
+    fun makeFile(fileName: String, callback: (() -> NBTTagCompound)?): Boolean{
+        if(currentDirectory.files.stream().anyMatch { it.name == fileName }){
+            printstr("File with name '$fileName' already exists.", this.os.terminal)
+            return false
+        }
+        val data = callback?.invoke() ?: NBTTagCompound()
+        this.currentDirectory.addFile(File(fileName, data))
+        return true
+    }
+
+    fun deleteFile(fileName: String): Boolean{
+        val f = this.currentDirectory.files.stream().filter { it.name == fileName }.findFirst()
+        if(f.isPresent){
+            val file = f.get()
+            if(file is Folder){
+                val fit = file.files.iterator()
+                for(ff in fit){
+                    file.files.remove(ff)
+                }
+            }
+            this.currentDirectory - file
+            return true
+        }
+        return false
+    }
+
+    fun makeFile(fileName: String) = this.makeFile(fileName, null)
+
+    fun writeToFile(fileName: String, callback: (fileData: NBTTagCompound) -> Unit): Boolean{
+        if(currentDirectory.files.stream().anyMatch { it.name == fileName }){
+            val file = currentDirectory.files.stream().filter { it.name == fileName }.findFirst().get()
+            callback(file.data)
+            return true
+        }
+        printstr("Could not find file with name '$fileName; data was not written.", os.terminal)
+        return false
+    }
+
+    fun writeToFileWithPath(path: String, callback: (fileData: NBTTagCompound) -> Unit){
+        val filePathPredicate: (file: File) -> Boolean = {file ->
+            val fname = file.name
+            val fpath = file.path
+            val absPath = "$fpath/$fname"
+            path == absPath
+        }
+        if(currentDirectory.files.stream().anyMatch(filePathPredicate)){
+            val file = currentDirectory.files.stream().filter(filePathPredicate).findFirst().get()
+            callback(file.data)
+            return
+        }
+        printstr("Could not find file with path '$path; data was not written.", os.terminal)
+    }
+
+    fun serialize(): NBTTagCompound = root.data
+
+    fun deserialize(nbt: NBTTagCompound){
+        root.deserialize(nbt)
+    }
+}
+
+open class File constructor(val name: String, var data: NBTTagCompound){
+    var parent: Folder? = null
+    val path: String = "${parent?.path ?: ""}/$name"
+}
+
+open class Folder constructor(name: String, data: NBTTagCompound) : File(name, data){
+    val files: ArrayList<File> = arrayListOf()
+
+    fun addFile(file: File){
+        files += file
+        file.parent = this
+        serializeAddedFile(file)
+    }
+
+    private fun serializeAddedFile(file: File){
+        val data = file.data
+        val type = if(file is Folder) "folder" else "file"
+        val name = file.name
+        val tag = NBTTagCompound()
+        tag.setString("name", name)
+        tag.setString("type", type)
+        tag.setTag("data", data)
+        this.data.setTag(name, data)
+    }
+
+    fun deserialize(nbt: NBTTagCompound){
+        for(k in nbt.keySet){
+            val n = nbt.getCompoundTag(k)
+            if(n.hasKey("name") && n.hasKey("type") && n.hasKey("data")){
+                val name = n.getString("name")
+                val type = n.getString("type")
+                val data = n.getCompoundTag("data")
+                if(type == "folder"){
+                    val folder = Folder(name, data)
+                    this.files += folder
+                }
+            }
+        }
+        this.data = nbt
+    }
+
+    operator fun plus(file: File){
+        this.addFile(file)
+    }
+
+    fun removeFile(name: String){
+        val file = this.files.stream().filter { it.name == name }.findFirst().get()
+        this.removeFile(file)
+    }
+
+    fun removeFile(file: File){
+        this.files -= file
+        this.data.removeTag(file.name)
+    }
+
+    operator fun minus(file: File){
+        this.removeFile(file)
+    }
+
+    operator fun minus(fileName: String){
+        this.removeFile(fileName)
+    }
+}

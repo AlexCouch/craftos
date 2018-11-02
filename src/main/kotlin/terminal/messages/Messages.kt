@@ -3,13 +3,11 @@ package terminal.messages
 import blocks.TileEntityDesktopComputer
 import io.netty.buffer.ByteBuf
 import net.minecraft.client.Minecraft
-import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.nbt.NBTTagList
 import net.minecraft.nbt.NBTTagString
 import net.minecraft.nbt.NBTUtil
 import net.minecraft.util.math.BlockPos
-import net.minecraft.world.World
 import net.minecraftforge.common.util.Constants
 import net.minecraftforge.fml.common.network.ByteBufUtils
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage
@@ -159,6 +157,178 @@ class StartTerminalMessage(): IMessage{
     }
 }
 
+class PrintToLoadScreenMessage(): IMessage{
+    var string = ""
+
+    constructor(string: String) : this(){
+        this.string = string
+    }
+
+    override fun fromBytes(buf: ByteBuf) {
+        this.string = ByteBufUtils.readUTF8String(buf)
+    }
+
+    override fun toBytes(buf: ByteBuf?) {
+        ByteBufUtils.writeUTF8String(buf, this.string)
+    }
+}
+
+class OpenGuiMessage(): IMessage{
+    var guiId = -1
+
+    constructor(guiId: Int) : this(){
+        this.guiId = guiId
+    }
+
+    override fun fromBytes(buf: ByteBuf) {
+        this.guiId = buf.readInt()
+    }
+
+    override fun toBytes(buf: ByteBuf) {
+        buf.writeInt(this.guiId)
+    }
+
+}
+
+class StartOSBootMessage() : IMessage{
+    var blockpos = BlockPos.ORIGIN
+
+    constructor(blockpos: BlockPos) : this(){
+        this.blockpos = blockpos
+    }
+
+    override fun fromBytes(buf: ByteBuf){
+        this.blockpos = NBTUtil.getPosFromTag(ByteBufUtils.readTag(buf) ?: NBTTagCompound())
+    }
+
+    override fun toBytes(buf: ByteBuf){
+        ByteBufUtils.writeTag(buf, NBTUtil.createPosTag(this.blockpos))
+    }
+}
+
+val startOSBootMessageHandler = IMessageHandler<StartOSBootMessage, InitializeOSMessage>{ msg, ctx ->
+    val player = Minecraft.getMinecraft().player
+    player.openGui(DevicesPlus, 0, player.world, msg.blockpos.x, msg.blockpos.y, msg.blockpos.z)
+    InitializeOSMessage(msg.blockpos)
+}
+
+class InitializeOSMessage() : IMessage{
+    var blockpos: BlockPos = BlockPos.ORIGIN
+
+    constructor(blockpos: BlockPos) : this(){
+        this.blockpos = blockpos
+    }
+
+    override fun fromBytes(buf: ByteBuf){
+        this.blockpos = NBTUtil.getPosFromTag(ByteBufUtils.readTag(buf) ?: NBTTagCompound())
+    }
+
+    override fun toBytes(buf: ByteBuf){
+        ByteBufUtils.writeTag(buf, NBTUtil.createPosTag(this.blockpos))
+    }
+}
+
+val initializeOSMessageHandler = IMessageHandler<InitializeOSMessage, IMessage>{ msg, ctx ->
+    val comp = getCurrentComputer(ctx, msg.blockpos, ctx.side)
+    comp.system.os?.start()
+    null
+}
+
+class ChangeScreenModeMessage() : IMessage{
+    var mode: Int = -1
+    var blockpos: BlockPos = BlockPos.ORIGIN
+
+    constructor(mode: Int, blockpos: BlockPos) : this(){
+        this.mode = mode
+        this.blockpos = blockpos
+    }
+
+    override fun fromBytes(buf: ByteBuf) {
+        this.mode = buf.readInt()
+        this.blockpos = NBTUtil.getPosFromTag(ByteBufUtils.readTag(buf) ?: NBTTagCompound())
+    }
+
+    override fun toBytes(buf: ByteBuf) {
+        buf.writeInt(this.mode)
+        ByteBufUtils.writeTag(buf, NBTUtil.createPosTag(this.blockpos))
+    }
+
+}
+
+class GetCurrentDirectoryFilesMessage() : IMessage{
+    var blockpos: BlockPos = BlockPos.ORIGIN
+
+    constructor(blockpos: BlockPos) : this(){
+        this.blockpos = blockpos
+    }
+
+    override fun fromBytes(buf: ByteBuf) {
+        this.blockpos = NBTUtil.getPosFromTag(ByteBufUtils.readTag(buf) ?: NBTTagCompound())
+    }
+
+    override fun toBytes(buf: ByteBuf) {
+        ByteBufUtils.writeTag(buf, NBTUtil.createPosTag(this.blockpos))
+    }
+
+}
+
+val getCurrentDirectoryFilesMessageHandler = IMessageHandler<GetCurrentDirectoryFilesMessage, PrintCurrentDirectoryFilesMessage>{ msg, ctx ->
+    val comp = getCurrentComputer(ctx, msg.blockpos, ctx.side)
+    val os = comp.system.os ?: return@IMessageHandler null
+    val fs = os.fileSystem
+    val files = fs.currentDirectory.files
+    val filenames = arrayListOf<String>()
+    files.forEach { filenames += it.name }
+    PrintCurrentDirectoryFilesMessage(msg.blockpos, filenames)
+}
+
+class PrintCurrentDirectoryFilesMessage() : IMessage{
+    var blockpos: BlockPos = BlockPos.ORIGIN
+    val files = arrayListOf<String>()
+
+    constructor(blockpos: BlockPos, files: ArrayList<String>) : this(){
+        this.blockpos = blockpos
+        this.files.addAll(files)
+    }
+
+    override fun fromBytes(buf: ByteBuf) {
+        this.blockpos = NBTUtil.getPosFromTag(ByteBufUtils.readTag(buf) ?: NBTTagCompound())
+        val filestag = ByteBufUtils.readTag(buf) ?: return
+        filestag.keySet.forEach {
+            val str = filestag.getString(it)
+            this.files += str
+        }
+    }
+
+    override fun toBytes(buf: ByteBuf) {
+        ByteBufUtils.writeTag(buf, NBTUtil.createPosTag(this.blockpos))
+        val filestag = NBTTagCompound()
+        files.forEach {
+            filestag.setTag(it, NBTTagString(it))
+        }
+        ByteBufUtils.writeTag(buf, filestag)
+    }
+
+}
+
+val printCurrentDirectoryFilesMessageHandler = IMessageHandler<PrintCurrentDirectoryFilesMessage, IMessage>{msg, ctx ->
+    val comp = getCurrentComputer(ctx, msg.blockpos, ctx.side)
+    val os = comp.system.os ?: return@IMessageHandler null
+    val fs = os.fileSystem
+    val files = fs.currentDirectory.files
+    os.terminal.printStringClient("Files in current directory:")
+    files.forEach {
+        os.terminal.printStringClient("\t${it.name}")
+    }
+    null
+}
+
+val changeScreenModeMessageHandler = IMessageHandler<ChangeScreenModeMessage, IMessage>{ msg, ctx ->
+    val comp = getCurrentComputer(ctx, msg.blockpos, ctx.side)
+//    comp.system.os?.screen?.mode = msg.mode
+    null
+}
+
 fun getCurrentComputer(ctx: MessageContext, pos: BlockPos, side: Side): TileEntityDesktopComputer{
     val world = if(side == Side.SERVER) ctx.serverHandler.player.world else Minecraft.getMinecraft().world
     val te = world.getTileEntity(pos) as TileEntityDesktopComputer
@@ -182,22 +352,29 @@ val loadTermHistoryInStorageHandler = IMessageHandler<LoadTermHistoryInStorageMe
     }
     val te = getCurrentComputer(ctx, msg.pos, Side.CLIENT)
     val system = te.system
-    system.os?.terminal?.client?.loadTerminalHistory(history)
+    system.os?.screen?.loadTerminalHistory(history)
     null
 }
 
 val terminalExecuteCommandMessage = IMessageHandler <TerminalExecuteCommandMessage, IMessage>{ msg, ctx ->
     val te = getCurrentComputer(ctx, msg.pos, ctx.side)
     val system = te.system
-    val terminal = system.terminal
-    val command = terminal.getCommand(msg.command)
-    terminal.executeCommand(ctx.serverHandler.player, command, msg.args)
+    val terminal = system.os?.terminal
+    if(terminal?.verifyCommandOrPackage(msg.command) == true){
+        val command = terminal.getCommand(msg.command)
+        terminal.executeCommand(ctx.serverHandler.player, command, msg.args)
+    }else{
+        val pack = terminal?.getPackage(msg.command) ?: return@IMessageHandler null
+        terminal.openPackage(ctx.serverHandler.player, pack, msg.args)
+    }
     null
 }
 
 val displayStringOnTerminalHandler = IMessageHandler<DisplayStringOnTerminal, IMessage>{ msg, ctx ->
     val te = getCurrentComputer(ctx, msg.pos, Side.CLIENT)
-    te.os?.terminal!!.client?.printToScreen(msg.message)
+    val system = te.system
+    val os = system.os
+    os?.screen?.printToScreen(msg.message)
     null
 }
 
@@ -207,8 +384,11 @@ val openTerminalGuiMessageHandler = IMessageHandler<OpenTerminalGuiMessage, IMes
     null
 }
 
-val startTerminalMessageHandler = IMessageHandler<StartTerminalMessage, IMessage>{ msg, ctx ->
+val startTerminalMessageHandler = IMessageHandler<StartTerminalMessage, OpenTerminalGuiMessage>{ msg, ctx ->
     val comp = getCurrentComputer(ctx, msg.blockpos, ctx.side)
-    comp.system.terminal.start(ctx.serverHandler.player)
-    null
+    val system = comp.system
+    val os = system.os ?: return@IMessageHandler null
+    val terminal = os.terminal
+    terminal.start(ctx.serverHandler.player)
+    OpenTerminalGuiMessage(msg.blockpos)
 }

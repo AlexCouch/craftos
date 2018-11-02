@@ -7,24 +7,17 @@ import net.minecraft.client.gui.GuiScreen
 import net.minecraft.client.gui.GuiTextField
 import net.minecraft.client.renderer.GlStateManager
 import net.minecraft.entity.player.EntityPlayer
-import net.minecraft.entity.player.EntityPlayerMP
-import net.minecraft.inventory.Container
 import net.minecraft.util.math.BlockPos
 import net.minecraft.world.World
-import net.minecraftforge.fml.common.FMLCommonHandler
 import net.minecraftforge.fml.common.network.IGuiHandler
 import net.minecraftforge.fml.relauncher.Side
 import net.minecraftforge.fml.relauncher.SideOnly
 import org.lwjgl.input.Keyboard
-import os.couch.CouchOS
-import pkg.NetworkingPackage
-import stream
-import terminal.CouchTerminal
 import java.awt.Color
 import terminal.messages.*
 
 @SideOnly(Side.CLIENT)
-class TerminalScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
+class SystemScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
     private var w = 0.0
     private var h = 0.0
     private val x = 30.0
@@ -45,7 +38,18 @@ class TerminalScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
                 this.h.toInt() - 25
         )
     }
-    val terminal = te.system.terminal
+
+    val system = te.system
+    val os = system.os!!
+    val terminal = os.terminal
+    val currentDirectory = os.fileSystem.currentDirectory
+
+    /*var mode = 0
+        set(m){
+            this.lines.clear()
+            field = m
+        }*/
+    val preText = "${currentDirectory.path} > "
 
     override fun initGui() {
         super.initGui()
@@ -53,28 +57,25 @@ class TerminalScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
         this.h = this.height - 35.0
         textField.isFocused = true
         textField.enableBackgroundDrawing = false
-        textField.text = "> "
-        stream.sendToServer(StartTerminalMessage(te.pos))
-        te.os = CouchOS(te.system, terminal)
+        textField.text = preText
     }
 
     override fun keyTyped(typedChar: Char, keyCode: Int) {
         super.keyTyped(typedChar, keyCode)
-        when(keyCode){
+        when (keyCode) {
             Keyboard.KEY_RETURN -> {
                 val rawtext = textField.text
-                val pre = "> "
-                val text = rawtext.substring(rawtext.lastIndexOf(pre) + pre.length until rawtext.length)
+                val text = rawtext.substring(rawtext.lastIndexOf(preText) + preText.length until rawtext.length)
                 lines.add(text)
                 commandHistory.add(text)
-                textField.text = "> "
+                textField.text = preText
                 sendCommand(text)
                 saveTermHistory()
                 return
             }
             Keyboard.KEY_BACK -> {
                 val text = textField.text
-                if(text == "> ") return
+                if (text == preText) return
             }
         }
         this.textField.textboxKeyTyped(typedChar, keyCode)
@@ -82,7 +83,7 @@ class TerminalScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
 
     fun printToScreen(string: String){
         lines.add(string)
-        textField.text = "> "
+        textField.text = preText
         this.resetCaretLocation()
     }
 
@@ -101,7 +102,9 @@ class TerminalScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
         GlStateManager.color(0f, 0f, 0f)
         Gui.drawRect(this.x.toInt(), this.y.toInt(), this.w.toInt(), this.h.toInt(), Color.BLACK.rgb)
         this.textField.drawTextBox()
-        lines.forEachIndexed { index, s ->
+        val itr = lines.iterator()
+        itr.withIndex().forEach{ i ->
+            val (index, s) = i
             this.fontRenderer.drawString(s, cx.toInt(), cy.toInt() + (8 * index), Color.WHITE.rgb)
         }
     }
@@ -134,7 +137,7 @@ object GuiRegistry : IGuiHandler{
     override fun getClientGuiElement(ID: Int, player: EntityPlayer, world: World, x: Int, y: Int, z: Int): Any?{
         if(ID == 0){
             val te = Minecraft.getMinecraft().world.getTileEntity(BlockPos(x, y, z)) as TileEntityDesktopComputer
-            return TerminalScreen(te)
+            return SystemScreen(te)
         }
         return null
     }

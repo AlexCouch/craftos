@@ -3,11 +3,28 @@ package terminal
 import modid
 import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.util.ResourceLocation
-import os.OperatingSystem
+import utils.printstr
+import terminal.messages.*
 
 interface TerminalCommand{
     val name: ResourceLocation
     val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
+}
+
+object PackageManagerCommand : TerminalCommand{
+    override val name: ResourceLocation = ResourceLocation(modid, "pakker")
+    override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit = {
+        _, terminal, args ->
+        if(args.size == 2) {
+            if (args[0] == "-i") {
+                terminal.packageManager.installPackage(args[1])
+            }else{
+                printstr("That is not a valid flag: ${args[0]}")
+            }
+        }
+
+    }
+
 }
 
 object EchoCommand : TerminalCommand{
@@ -23,15 +40,102 @@ object EchoCommand : TerminalCommand{
         }
 }
 
+object ListFilesCommand : TerminalCommand{
+    override val name: ResourceLocation
+        get() = ResourceLocation(modid, "lf")
+    override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
+        get() = { _, terminal, _ ->
+            terminal.sendMessageToServer(GetCurrentDirectoryFilesMessage(terminal.os.system.te.pos))
+        }
+
+}
+
+object RelocateCommand : TerminalCommand{
+    override val name: ResourceLocation
+        get() = ResourceLocation(modid, "rel")
+    override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
+        get() = {player, terminal, args ->
+            if(args.size == 1){
+                val name = args[0]
+                if(terminal.os.fileSystem.relocate(name)){
+                    printstr("Relocated to $name.", terminal)
+                }
+            }
+        }
+
+}
+
 object ClearCommand : TerminalCommand{
     override val name: ResourceLocation
         get() = ResourceLocation(modid, "clear")
     override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
         get() = {_,terminal, _ ->
             if(terminal is CouchTerminal){
-                terminal.client?.modifyTerminalHistory {
+                terminal.os.screen?.modifyTerminalHistory {
                     it.clear()
                 }
             }
         }
+}
+
+object MakeFileCommand : TerminalCommand{
+    override val name: ResourceLocation
+        get() = ResourceLocation(modid, "mkf")
+    override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
+        get() = { player, terminal, args ->
+            if(args.size == 1){
+                val name = args[0]
+                terminal.os.fileSystem.makeFile(name)
+                terminal.printStringServer("File with name '$name' created!", player)
+            }else{
+                terminal.printStringServer("Incorrect amount of args; should only take name of file.", player)
+            }
+        }
+}
+
+object MakeDirCommand : TerminalCommand{
+    override val name: ResourceLocation
+        get() = ResourceLocation(modid, "mkd")
+    override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
+        get() = { player, terminal, args ->
+            if(args.size == 1){
+                val name = args[0]
+                terminal.os.fileSystem.makeDirectory(name)
+                terminal.printStringServer("Directory with name '$name' created!", player)
+            }else{
+                terminal.printStringServer("Incorrect amount of args; should only take name of directory.", player)
+            }
+        }
+}
+
+object DeleteFileCommand : TerminalCommand{
+    override val name: ResourceLocation = ResourceLocation(modid, "delf")
+    override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
+            get() = { player, terminal, args ->
+                if(args.size == 1){
+                    val name = args[0]
+                    terminal.os.fileSystem.deleteFile(name)
+                    terminal.printStringServer("File with name '$name' deleted!", player)
+                }else{
+                    terminal.printStringServer("Incorrect amount of args; should only take name of file.", player)
+                }
+            }
+
+}
+
+object DeleteDirectoryCommand : TerminalCommand{
+    override val name: ResourceLocation
+        get() = ResourceLocation(modid, "deld")
+    override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
+        get() = { player, terminal, args ->
+            if(args.size == 1){
+                val name = args[0]
+                if(terminal.os.fileSystem.deleteFile(name)){
+                    terminal.printStringServer("Directory with name '$name' created!", player)
+                }
+            }else{
+                terminal.printStringServer("Incorrect amount of args; should only take name of file.", player)
+            }
+        }
+
 }
