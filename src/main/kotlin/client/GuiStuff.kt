@@ -73,11 +73,13 @@ class SystemScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
             Keyboard.KEY_RETURN -> {
                 val rawtext = textField.text
                 val text = rawtext.substring(rawtext.lastIndexOf(preText) + preText.length until rawtext.length)
-                lines.add(text)
                 if(rawtext != preText) {
+                    lines.add(rawtext)
                     commandHistory.add(text)
                     sendCommand(text)
                     saveTermHistory()
+                }else{
+                    lines.add(text)
                 }
                 textField.text = preText
                 return
