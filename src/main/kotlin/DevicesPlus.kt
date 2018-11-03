@@ -39,6 +39,8 @@ object DevicesPlus{
         stream.registerMessage(changeScreenModeMessageHandler, ChangeScreenModeMessage::class.java, 2, Side.CLIENT)
         stream.registerMessage(startOSBootMessageHandler, StartOSBootMessage::class.java, 3, Side.CLIENT)
         stream.registerMessage(initializeOSMessageHandler, InitializeOSMessage::class.java, 4, Side.SERVER)
+        stream.registerMessage(printToBootScreenMessageHandler, PrintToBootScreenMessage::class.java, 5, Side.CLIENT)
+        stream.registerMessage(unlockBootScreenInputMessageHandler, UnlockBootScreenInputMessage::class.java, 6, Side.CLIENT)
         TileEntity.register("desktop_computer", TileEntityDesktopComputer::class.java)
     }
 }

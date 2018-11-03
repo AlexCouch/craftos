@@ -11,15 +11,29 @@ import net.minecraftforge.fml.common.network.simpleimpl.MessageContext
 import net.minecraftforge.fml.relauncher.Side
 import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler
 import DevicesPlus
+import client.BootScreen
 import os.filesystem.*
+import stream
 
-val startOSBootMessageHandler = IMessageHandler<StartOSBootMessage, InitializeOSMessage>{ msg, ctx ->
+val printToBootScreenMessageHandler = IMessageHandler<PrintToBootScreenMessage, IMessage>{ msg, ctx ->
+    Minecraft.getMinecraft().addScheduledTask {
+        val screen = Minecraft.getMinecraft().currentScreen ?: return@addScheduledTask
+        if(screen is BootScreen){
+            screen.printToScreen(msg.message)
+        }
+    }
+
+    null
+}
+
+val startOSBootMessageHandler = IMessageHandler<StartOSBootMessage, IMessage>{ msg, ctx ->
     val mc = Minecraft.getMinecraft()
     mc.addScheduledTask {
         val player = Minecraft.getMinecraft().player
-        player.openGui(DevicesPlus, 0, player.world, msg.blockpos.x, msg.blockpos.y, msg.blockpos.z)
+        player.openGui(DevicesPlus, 1, player.world, msg.blockpos.x, msg.blockpos.y, msg.blockpos.z)
+        stream.sendToServer(InitializeOSMessage(msg.blockpos))
     }
-    InitializeOSMessage(msg.blockpos)
+    null
 }
 
 val initializeOSMessageHandler = IMessageHandler<InitializeOSMessage, IMessage>{ msg, ctx ->
@@ -27,6 +41,16 @@ val initializeOSMessageHandler = IMessageHandler<InitializeOSMessage, IMessage>{
     mcs.addScheduledTask {
         val comp = getCurrentComputer(ctx, msg.blockpos, ctx.side)
         comp.system.os?.start()
+    }
+    null
+}
+
+val unlockBootScreenInputMessageHandler = IMessageHandler<UnlockBootScreenInputMessage, IMessage>{ msg, ctx ->
+    Minecraft.getMinecraft().addScheduledTask {
+        val currentScreen = Minecraft.getMinecraft().currentScreen ?: return@addScheduledTask
+        if(currentScreen is BootScreen){
+            currentScreen.allowInput = true
+        }
     }
     null
 }
@@ -59,17 +83,18 @@ fun getCurrentComputer(ctx: MessageContext, pos: BlockPos, side: Side): TileEnti
     return te
 }
 
-val saveTermHistoryInStorageHandler = IMessageHandler<SaveTermHistoryInMemory, LoadTermHistoryInStorageMessage>{ msg, ctx ->
-    var term = NBTTagCompound()
+val saveTermHistoryInStorageHandler = IMessageHandler<SaveTermHistoryInMemory, IMessage>{ msg, ctx ->
     ctx.serverHandler.player.server?.addScheduledTask {
+        var term: NBTTagCompound
         val te = getCurrentComputer(ctx, msg.pos, Side.SERVER)
         val termHistory = NBTTagCompound()
         termHistory.setTag("terminal_history", msg.data)
         termHistory.setString("name", "terminal_history")
         val mem = te.system.memory
         term = mem.pointerTo("terminal_history")
+        stream.sendTo(LoadTermHistoryInStorageMessage(term, msg.pos), ctx.serverHandler.player)
     }
-    LoadTermHistoryInStorageMessage(term, msg.pos)
+    null
 }
 
 val loadTermHistoryInStorageHandler = IMessageHandler<LoadTermHistoryInStorageMessage, IMessage>{ msg, ctx ->
@@ -121,14 +146,16 @@ val openTerminalGuiMessageHandler = IMessageHandler<OpenTerminalGuiMessage, IMes
     null
 }
 
-val startTerminalMessageHandler = IMessageHandler<StartTerminalMessage, OpenTerminalGuiMessage>{ msg, ctx ->
-    val mcs = ctx.serverHandler.player.server ?: return@IMessageHandler null
+val startTerminalMessageHandler = IMessageHandler<StartTerminalMessage, IMessage>{ msg, ctx ->
+    val player = ctx.serverHandler.player
+    val mcs = player.server ?: return@IMessageHandler null
     mcs.addScheduledTask {
         val comp = getCurrentComputer(ctx, msg.blockpos, ctx.side)
         val system = comp.system
         val os = system.os ?: return@addScheduledTask
         val terminal = os.terminal
         terminal.start(ctx.serverHandler.player)
+        stream.sendTo(OpenTerminalGuiMessage(msg.blockpos), player)
     }
-    OpenTerminalGuiMessage(msg.blockpos)
+    null
 }

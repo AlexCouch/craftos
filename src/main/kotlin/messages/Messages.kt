@@ -151,19 +151,19 @@ class StartTerminalMessage(): IMessage {
     }
 }
 
-class PrintToLoadScreenMessage(): IMessage {
-    var string = ""
+class UnlockBootScreenInputMessage(): IMessage {
+    lateinit var blockpos: BlockPos
 
-    constructor(string: String) : this(){
-        this.string = string
+    constructor(blockpos: BlockPos): this(){
+        this.blockpos = blockpos
     }
 
-    override fun fromBytes(buf: ByteBuf) {
-        this.string = ByteBufUtils.readUTF8String(buf)
+    override fun fromBytes(buf: ByteBuf){
+        this.blockpos = NBTUtil.getPosFromTag(ByteBufUtils.readTag(buf) ?: NBTTagCompound())
     }
 
-    override fun toBytes(buf: ByteBuf?) {
-        ByteBufUtils.writeUTF8String(buf, this.string)
+    override fun toBytes(buf: ByteBuf){
+        ByteBufUtils.writeTag(buf, NBTUtil.createPosTag(this.blockpos))
     }
 }
 
@@ -254,6 +254,27 @@ class SyncFileSystemClientMessage() : IMessage{
     override fun toBytes(buf: ByteBuf) {
         ByteBufUtils.writeTag(buf, NBTUtil.createPosTag(this.blockpos))
         ByteBufUtils.writeTag(buf, this.fsdata)
+    }
+
+}
+
+class PrintToBootScreenMessage() : IMessage {
+    var message: String = ""
+    var pos = BlockPos(0,0,0)
+
+    constructor(message: String, pos: BlockPos) : this(){
+        this.message = message
+        this.pos = pos
+    }
+
+    override fun fromBytes(buf: ByteBuf) {
+        this.message = ByteBufUtils.readUTF8String(buf)
+        this.pos = NBTUtil.getPosFromTag(ByteBufUtils.readTag(buf) ?: return)
+    }
+
+    override fun toBytes(buf: ByteBuf) {
+        ByteBufUtils.writeUTF8String(buf, this.message)
+        ByteBufUtils.writeTag(buf, NBTUtil.createPosTag(this.pos))
     }
 
 }

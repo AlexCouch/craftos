@@ -4,14 +4,12 @@ import client.SystemScreen
 import net.minecraft.nbt.NBTTagCompound
 import network.Port
 import os.filesystem.FileSystem
-import programs.Program
 import system.DeviceSystem
 import terminal.Terminal
 import utils.printstr
 
 interface OperatingSystem{
     val name: String
-    val apps: Set<Program>
     val fileSystem: FileSystem
     val terminal: Terminal
     val ports: ArrayList<Port<*>>

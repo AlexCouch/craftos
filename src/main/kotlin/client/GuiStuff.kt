@@ -15,6 +15,8 @@ import net.minecraftforge.fml.relauncher.SideOnly
 import org.lwjgl.input.Keyboard
 import java.awt.Color
 import messages.*
+import stream
+import system.CouchDesktopSystem
 
 @SideOnly(Side.CLIENT)
 class SystemScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
@@ -154,11 +156,50 @@ class SystemScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
     }
 }
 
+class BootScreen(private val blockpos: BlockPos) : GuiScreen(){
+    private val x = 30
+    private val y = 20
+    private val w by lazy{ this.width - 35 }
+    private val h by lazy{ this.height - 35 }
+    private val cx = x + 10
+    private val cy = y + 15
+    private val lines = arrayListOf<String>()
+
+    var allowInput = false
+
+    fun printToScreen(string: String){
+        if(string.startsWith("\n")){
+            string.replace("\n", "  ")
+        }
+        lines += string
+    }
+
+    override fun keyTyped(typedChar: Char, keyCode: Int) {
+        if(allowInput){
+            if(keyCode == Keyboard.KEY_RETURN){
+                stream.sendToServer(StartTerminalMessage(blockpos))
+            }
+        }
+    }
+
+    override fun drawScreen(mouseX: Int, mouseY: Int, partialTicks: Float) {
+        GlStateManager.color(0f, 0f, 0f)
+        Gui.drawRect(x, y, this.w, this.h, Color.BLACK.rgb)
+
+        lines.iterator().withIndex().forEach {
+            val (i, s) = it
+            this.fontRenderer.drawString(s, cx, cy + (8 * i), Color.WHITE.rgb)
+        }
+    }
+}
+
 object GuiRegistry : IGuiHandler{
     override fun getClientGuiElement(ID: Int, player: EntityPlayer, world: World, x: Int, y: Int, z: Int): Any?{
         if(ID == 0){
             val te = Minecraft.getMinecraft().world.getTileEntity(BlockPos(x, y, z)) as TileEntityDesktopComputer
             return SystemScreen(te)
+        }else if(ID == 1){
+            return BootScreen(BlockPos(x, y, z))
         }
         return null
     }

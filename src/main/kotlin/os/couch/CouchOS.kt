@@ -11,7 +11,6 @@ import network.Port
 import os.OperatingSystem
 import os.filesystem.FileSystem
 import os.filesystem.Folder
-import programs.Program
 import stream
 import system.CouchDesktopSystem
 import terminal.*
@@ -27,7 +26,6 @@ class CouchOS(override val system: CouchDesktopSystem) : OperatingSystem {
 
     override val name: String
         get() = "CouchOS"
-    override val apps: Set<Program> = HashSet()
     override val screen: SystemScreen? by lazy {
         val cs = Minecraft.getMinecraft().currentScreen ?: return@lazy null
         if(cs is SystemScreen){
@@ -36,24 +34,30 @@ class CouchOS(override val system: CouchDesktopSystem) : OperatingSystem {
         return@lazy null
     }
 
+    private fun printToBootScreen(message: String){
+        println(message)
+        stream.sendTo(PrintToBootScreenMessage(message, system.desktop.pos), system.player as EntityPlayerMP)
+    }
+
     override fun start() {
-        printstr("Starting up operating system...")
+        printToBootScreen("Starting up operating system...")
         val nbt = NBTTagCompound()
         nbt.setString("name", this.name)
         system.memory.allocate(nbt)
-        printstr("\tMemory setup complete!")
-        printstr("\tSetting up file system...")
+        printToBootScreen("\tMemory setup complete!")
+        printToBootScreen("\tSetting up file system...")
         val homefolder = Folder("home", NBTTagCompound())
         val packagesfolder = Folder("packages", NBTTagCompound())
         homefolder.addFile(packagesfolder)
         this.fileSystem.currentDirectory.addFile(homefolder)
-        printstr("Files in current directory...")
+        printToBootScreen("Files in current directory...")
         this.fileSystem.currentDirectory.files.forEach {
-            printstr("\t${it.name}")
+            printToBootScreen("\t${it.name}")
         }
-        printstr("\tFile system setup complete!")
-        printstr("Attempting to start terminal...")
-        stream.sendToServer(StartTerminalMessage(this.system.desktop.pos))
+        printToBootScreen("\tFile system setup complete!")
+        printToBootScreen("")
+        printToBootScreen("Operating system ready...press enter to continue...")
+        stream.sendTo(UnlockBootScreenInputMessage(this.system.desktop.pos), this.system.player as EntityPlayerMP)
     }
 
     override fun serializeOS(): NBTTagCompound{

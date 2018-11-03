@@ -3,17 +3,13 @@ package system
 import blocks.TileEntityDesktopComputer
 import net.minecraft.nbt.NBTTagCompound
 import os.OperatingSystem
-import net.minecraft.client.Minecraft
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.util.text.TextComponentString
 import network.Port
-import os.couch.CouchOS
-import DevicesPlus
 import messages.StartOSBootMessage
 import net.minecraft.entity.player.EntityPlayerMP
 import stream
-import terminal.messages.*
-import os.*
+import os.couch.*
 
 class CouchDesktopSystem(val desktop: TileEntityDesktopComputer) : DeviceSystem<TileEntityDesktopComputer>{
     override var os: OperatingSystem? = CouchOS(this)
@@ -27,14 +23,6 @@ class CouchDesktopSystem(val desktop: TileEntityDesktopComputer) : DeviceSystem<
 
     override fun shutdown() {
         //Shutdown applications, wait til all have shutdown, and clear memory
-        val programNBT = NBTTagCompound()
-        val os1 = this.os!! //Smart cast fails due to mutability
-        if(this.os?.apps != null){
-            for(program in os1.apps){
-                programNBT.setTag("programs", program.serialize())
-                program.shutdown()
-            }
-        }
         memory.clear()
     }
 
@@ -151,6 +139,8 @@ class Memory(val space: Long, var storedMemory: NBTTagCompound){
         return nbt
     }
 }
+
+data class OSBootableMedium(val name: String, val os: OperatingSystem)
 
 interface DeviceSystem<T : TileEntity>{
     var name: String
