@@ -28,10 +28,10 @@ class PackageManager(val terminal: Terminal){
                 return
             }
             this.installedPackages += pack
-            printstr("Package '$packname' has been installed.")
+            printstr("Package '$packname' has been installed.", this.terminal)
             return
         }
-        printstr("There is no such package with name: '$packname'")
+        printstr("There is no such package with name: '$packname'", this.terminal)
     }
 }
 

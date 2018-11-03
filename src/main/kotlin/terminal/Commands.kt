@@ -1,12 +1,8 @@
 package terminal
 
-import blocks.TileEntityDesktopComputer
 import modid
 import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.util.ResourceLocation
-import utils.printstr
-import messages.*
-import net.minecraftforge.fml.relauncher.Side
 
 interface TerminalCommand{
     val name: ResourceLocation
@@ -16,12 +12,12 @@ interface TerminalCommand{
 object PackageManagerCommand : TerminalCommand{
     override val name: ResourceLocation = ResourceLocation(modid, "pakker")
     override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit = {
-        _, terminal, args ->
+        player, terminal, args ->
         if(args.size == 2) {
             if (args[0] == "-i") {
                 terminal.packageManager.installPackage(args[1])
             }else{
-                printstr("That is not a valid flag: ${args[0]}")
+                terminal.printStringServer("That is not a valid flag: ${args[0]}", player)
             }
         }
 
@@ -44,7 +40,7 @@ object EchoCommand : TerminalCommand{
 
 object ListFilesCommand : TerminalCommand{
     override val name: ResourceLocation
-        get() = ResourceLocation(modid, "lf")
+        get() = ResourceLocation(modid, "ls")
     override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
         get() = { player, terminal, _ ->
             val os = terminal.os
@@ -60,14 +56,16 @@ object ListFilesCommand : TerminalCommand{
 
 object RelocateCommand : TerminalCommand{
     override val name: ResourceLocation
-        get() = ResourceLocation(modid, "rel")
+        get() = ResourceLocation(modid, "cd")
     override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
-        get() = {player, terminal, args ->
+        get() = { player, terminal, args ->
             if(args.size == 1){
                 val name = args[0]
                 if(terminal.os.fileSystem.relocate(name)){
-                    printstr("Relocated to $name.", terminal)
+                    terminal.printStringServer("Relocated to ${terminal.os.fileSystem.currentDirectory.path}.", player)
                 }
+            }else{
+                terminal.printStringServer("This command requires only one argument, you have ${args.size}.", player)
             }
         }
 
@@ -86,7 +84,7 @@ object ClearCommand : TerminalCommand{
 
 object MakeFileCommand : TerminalCommand{
     override val name: ResourceLocation
-        get() = ResourceLocation(modid, "mkf")
+        get() = ResourceLocation(modid, "mkfile")
     override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
         get() = { player, terminal, args ->
             if(args.size == 1){
@@ -101,7 +99,7 @@ object MakeFileCommand : TerminalCommand{
 
 object MakeDirCommand : TerminalCommand{
     override val name: ResourceLocation
-        get() = ResourceLocation(modid, "mkd")
+        get() = ResourceLocation(modid, "mkdir")
     override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
         get() = { player, terminal, args ->
             if(args.size == 1){
@@ -115,7 +113,7 @@ object MakeDirCommand : TerminalCommand{
 }
 
 object DeleteFileCommand : TerminalCommand{
-    override val name: ResourceLocation = ResourceLocation(modid, "delf")
+    override val name: ResourceLocation = ResourceLocation(modid, "rm")
     override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
             get() = { player, terminal, args ->
                 if(args.size == 1){
@@ -131,7 +129,7 @@ object DeleteFileCommand : TerminalCommand{
 
 object DeleteDirectoryCommand : TerminalCommand{
     override val name: ResourceLocation
-        get() = ResourceLocation(modid, "deld")
+        get() = ResourceLocation(modid, "rmd")
     override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
         get() = { player, terminal, args ->
             if(args.size == 1){
