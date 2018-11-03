@@ -156,6 +156,7 @@ class SystemScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
     }
 }
 
+@SideOnly(Side.CLIENT)
 class BootScreen(private val blockpos: BlockPos) : GuiScreen(){
     private val x = 30
     private val y = 20

@@ -37,7 +37,7 @@ val startOSBootMessageHandler = IMessageHandler<StartOSBootMessage, IMessage>{ m
 }
 
 val initializeOSMessageHandler = IMessageHandler<InitializeOSMessage, IMessage>{ msg, ctx ->
-    val mcs = ctx.serverHandler.player.server ?: return@IMessageHandler null
+    val mcs = ctx.serverHandler.player.serverWorld
     mcs.addScheduledTask {
         val comp = getCurrentComputer(ctx, msg.blockpos, ctx.side)
         comp.system.os?.start()
@@ -84,7 +84,7 @@ fun getCurrentComputer(ctx: MessageContext, pos: BlockPos, side: Side): TileEnti
 }
 
 val saveTermHistoryInStorageHandler = IMessageHandler<SaveTermHistoryInMemory, IMessage>{ msg, ctx ->
-    ctx.serverHandler.player.server?.addScheduledTask {
+    ctx.serverHandler.player.serverWorld.addScheduledTask {
         var term: NBTTagCompound
         val te = getCurrentComputer(ctx, msg.pos, Side.SERVER)
         val termHistory = NBTTagCompound()
@@ -92,7 +92,7 @@ val saveTermHistoryInStorageHandler = IMessageHandler<SaveTermHistoryInMemory, I
         termHistory.setString("name", "terminal_history")
         val mem = te.system.memory
         term = mem.pointerTo("terminal_history")
-        stream.sendTo(LoadTermHistoryInStorageMessage(term, msg.pos), ctx.serverHandler.player)
+        te.system.os?.terminal?.sendMessageToClient(LoadTermHistoryInStorageMessage(term, msg.pos), ctx.serverHandler.player)
     }
     null
 }
@@ -112,7 +112,7 @@ val loadTermHistoryInStorageHandler = IMessageHandler<LoadTermHistoryInStorageMe
 }
 
 val terminalExecuteCommandMessage = IMessageHandler <TerminalExecuteCommandMessage, IMessage>{ msg, ctx ->
-    val mcs = ctx.serverHandler.player.server ?: return@IMessageHandler null
+    val mcs = ctx.serverHandler.player.serverWorld ?: return@IMessageHandler null
     mcs.addScheduledTask {
         val te = getCurrentComputer(ctx, msg.pos, ctx.side)
         val system = te.system
@@ -148,7 +148,7 @@ val openTerminalGuiMessageHandler = IMessageHandler<OpenTerminalGuiMessage, IMes
 
 val startTerminalMessageHandler = IMessageHandler<StartTerminalMessage, IMessage>{ msg, ctx ->
     val player = ctx.serverHandler.player
-    val mcs = player.server ?: return@IMessageHandler null
+    val mcs = player.serverWorld ?: return@IMessageHandler null
     mcs.addScheduledTask {
         val comp = getCurrentComputer(ctx, msg.blockpos, ctx.side)
         val system = comp.system
