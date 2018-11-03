@@ -50,11 +50,16 @@ class SystemScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
             this.lines.clear()
             field = m
         }*/
-    var preText = ""
+    var preText = "${this.currentDirectory.path} >"
+        set(pt){
+            val rawText = textField.text
+            val currentText = rawText.substring(rawText.indexOf('>') + 1)
+            textField.text = "$pt$currentText"
+            field = pt
+        }
 
     override fun initGui() {
         super.initGui()
-        this.preText = "${this.currentDirectory.path} >"
         this.w = this.width - 35.0
         this.h = this.height - 35.0
         textField.isFocused = true
