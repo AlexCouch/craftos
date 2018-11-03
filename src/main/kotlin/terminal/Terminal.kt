@@ -9,7 +9,7 @@ import os.OperatingSystem
 import os.couch.CouchOS
 import pkg.*
 import stream
-import terminal.messages.*
+import messages.*
 import utils.printstr
 
 val terminalStream: SimpleNetworkWrapper = NetworkRegistry.INSTANCE.newSimpleChannel("terminal_stream")
@@ -97,8 +97,6 @@ class CouchTerminal(override val os: CouchOS) : Terminal(os){
         terminalStream.registerMessage(saveTermHistoryInStorageHandler, SaveTermHistoryInMemory::class.java, 1, Side.SERVER)
         terminalStream.registerMessage(loadTermHistoryInStorageHandler, LoadTermHistoryInStorageMessage::class.java, 2, Side.CLIENT)
         terminalStream.registerMessage(displayStringOnTerminalHandler, DisplayStringOnTerminal::class.java, 3, Side.CLIENT)
-        terminalStream.registerMessage(printCurrentDirectoryFilesMessageHandler, PrintCurrentDirectoryFilesMessage::class.java, 4, Side.SERVER)
-        terminalStream.registerMessage(getCurrentDirectoryFilesMessageHandler, GetCurrentDirectoryFilesMessage::class.java, 5, Side.SERVER)
-        terminalStream.registerMessage(printCurrentDirectoryFilesMessageHandler, PrintCurrentDirectoryFilesMessage::class.java, 6, Side.CLIENT)
+        terminalStream.registerMessage(syncFileSystemClientMessageHandler, SyncFileSystemClientMessage::class.java, 6, Side.CLIENT)
     }
 }

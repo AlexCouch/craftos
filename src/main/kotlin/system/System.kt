@@ -9,6 +9,7 @@ import net.minecraft.util.text.TextComponentString
 import network.Port
 import os.couch.CouchOS
 import DevicesPlus
+import messages.StartOSBootMessage
 import net.minecraft.entity.player.EntityPlayerMP
 import stream
 import terminal.messages.*

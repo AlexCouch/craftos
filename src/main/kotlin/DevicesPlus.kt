@@ -1,6 +1,7 @@
 import blocks.DesktopComputerBlock
 import blocks.TileEntityDesktopComputer
 import client.GuiRegistry
+import messages.*
 import net.minecraft.block.Block
 import net.minecraft.item.Item
 import net.minecraft.item.ItemBlock
@@ -13,7 +14,6 @@ import net.minecraftforge.fml.common.event.FMLPreInitializationEvent
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.common.network.NetworkRegistry
 import net.minecraftforge.fml.relauncher.Side
-import terminal.messages.*
 
 const val modid = "devices+"
 const val name = "Devices Plus"

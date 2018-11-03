@@ -7,7 +7,6 @@ import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.nbt.NBTTagList
 import net.minecraft.nbt.NBTTagString
 import net.minecraftforge.common.util.Constants.NBT.TAG_STRING
-import network.NetworkPort
 import network.Port
 import os.OperatingSystem
 import os.filesystem.FileSystem
@@ -16,7 +15,7 @@ import programs.Program
 import stream
 import system.CouchDesktopSystem
 import terminal.*
-import terminal.messages.*
+import messages.*
 import utils.printstr
 
 class CouchOS(override val system: CouchDesktopSystem) : OperatingSystem {
@@ -24,12 +23,7 @@ class CouchOS(override val system: CouchDesktopSystem) : OperatingSystem {
     override val fileSystem: FileSystem = FileSystem(this)
 
     override val ports: ArrayList<Port<*>>
-        get() = arrayListOf(
-                    NetworkPort(0, system),
-                    NetworkPort(1, system),
-                    NetworkPort(2, system),
-                    NetworkPort(2, system)
-            )
+        get() = arrayListOf()
 
     override val name: String
         get() = "CouchOS"

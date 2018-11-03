@@ -1,20 +1,27 @@
 package os.filesystem
 
+import blocks.TileEntityDesktopComputer
+import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.nbt.NBTTagCompound
 import os.OperatingSystem
+import messages.*
 import utils.printstr
 
 class FileSystem(private val os: OperatingSystem){
     private val root = Folder("root", NBTTagCompound())
     var currentDirectory = root
-        private set
 
     fun relocate(dirName: String): Boolean{
-        if(dirName == "..") currentDirectory = currentDirectory.parent ?: return false
+        if(dirName == ".."){
+            currentDirectory = currentDirectory.parent ?: return false
+            syncWithClient()
+            return true
+        }
         if(currentDirectory.files.stream().anyMatch { it.name == dirName }){
             val new = currentDirectory.files.stream().filter { it.name == dirName }.findFirst().get()
             if(new is Folder){
                 currentDirectory = new
+                syncWithClient()
                 return true
             }
             printstr("$dirName is not a directory; rel cancelled!", this.os.terminal)
@@ -22,6 +29,19 @@ class FileSystem(private val os: OperatingSystem){
         }
         printstr("$dirName does not exist in current directory!", this.os.terminal)
         return false
+    }
+
+    private fun syncWithClient(){
+        val cddata = this.currentDirectory.data
+        val nbt = NBTTagCompound()
+        nbt.setString("name", this.currentDirectory.name)
+        nbt.setTag("data", cddata)
+        this.os.terminal.sendMessageToClient(
+                SyncFileSystemClientMessage(
+                        this.os.system.te.pos,
+                        nbt
+                ),
+                (this.os.system.te as TileEntityDesktopComputer).player as EntityPlayerMP)
     }
 
     fun makeDirectory(dirName: String, callback: (() -> NBTTagCompound)?): Boolean{
@@ -117,20 +137,31 @@ open class Folder constructor(name: String, data: NBTTagCompound) : File(name, d
         val tag = NBTTagCompound()
         tag.setString("name", name)
         tag.setString("type", type)
+        val parentTag = NBTTagCompound()
+        parentTag.setString("name", this.parent?.name ?: "")
+        parentTag.setTag("parentData", this.parent?.data ?: NBTTagCompound())
+        tag.setTag("parent", parentTag)
         tag.setTag("data", data)
-        this.data.setTag(name, data)
+        this.data.setTag(name, tag)
     }
 
     fun deserialize(nbt: NBTTagCompound){
         for(k in nbt.keySet){
             val n = nbt.getCompoundTag(k)
-            if(n.hasKey("name") && n.hasKey("type") && n.hasKey("data")){
+            if(n.hasKey("name") && n.hasKey("type") && n.hasKey("data") && n.hasKey("parent")){
                 val name = n.getString("name")
                 val type = n.getString("type")
                 val data = n.getCompoundTag("data")
+                val parent = n.getCompoundTag("parent")
                 if(type == "folder"){
                     val folder = Folder(name, data)
                     this.files += folder
+                }
+                if(parent.hasKey("name") && parent.hasKey("parentData")){
+                    val pname = parent.getString("name")
+                    val pdata = parent.getCompoundTag("parentData")
+                    val pfile = Folder(pname, NBTTagCompound())
+                    pfile.deserialize(pdata)
                 }
             }
         }

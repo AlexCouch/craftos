@@ -1,16 +1,10 @@
 package network
 
-import com.mrcrayfish.device.DeviceConfig
-import com.mrcrayfish.device.api.task.TaskManager
-import com.mrcrayfish.device.core.Device
-import com.mrcrayfish.device.core.network.Router
-import com.mrcrayfish.device.core.network.task.TaskConnect
-import com.mrcrayfish.device.tileentity.TileEntityRouter
 import net.minecraft.client.Minecraft
 import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.util.math.BlockPos
 import system.CouchDesktopSystem
-import terminal.messages.DisplayStringOnTerminal
+import messages.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
@@ -21,7 +15,7 @@ abstract class Port<T>(
     var available = false
     abstract fun start()
 }
-
+/*
 class NetworkPort(
         override val portId: Int,
         val system: CouchDesktopSystem
@@ -35,8 +29,9 @@ class NetworkPort(
     fun connect(name: String){
         this.t.connectToRouter(system.desktop.pos, this.t.getRouterByName(name))
     }
-}
+}*/
 
+/*
 class SystemNetwork(val user: EntityPlayerMP, val system: CouchDesktopSystem){
     val routers = ArrayList<Device>()
 
@@ -81,4 +76,4 @@ class SystemNetwork(val user: EntityPlayerMP, val system: CouchDesktopSystem){
         }
         TaskManager.sendTask(connect)
     }
-}
+}*/

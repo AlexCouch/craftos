@@ -20,7 +20,7 @@ import net.minecraft.network.NetworkManager
 import net.minecraft.network.play.server.SPacketUpdateTileEntity
 import stream
 import system.CouchDesktopSystem
-import terminal.messages.OpenGuiMessage
+import messages.*
 
 object DesktopComputerBlock : Block(Material.IRON), ITileEntityProvider {
     init{
@@ -57,8 +57,7 @@ class TileEntityDesktopComputer : TileEntity(){
     var storage = NBTTagCompound()
     var started = false
     var player: EntityPlayer? = null
-    val system: CouchDesktopSystem
-        get() = CouchDesktopSystem(this)
+    val system: CouchDesktopSystem = CouchDesktopSystem(this)
 
     fun startup(){
         if(started) return
@@ -75,10 +74,6 @@ class TileEntityDesktopComputer : TileEntity(){
     override fun onDataPacket(net: NetworkManager, pkt: SPacketUpdateTileEntity) {
         super.onDataPacket(net, pkt)
         handleUpdateTag(pkt.nbtCompound)
-    }
-
-    fun openGui(){
-//        stream.sendTo(OpenTerminalGuiMessage(this.pos), this.system.player as EntityPlayerMP)
     }
 
     fun writeToStorage(name: String, nbt: NBTBase){

@@ -14,7 +14,7 @@ import net.minecraftforge.fml.relauncher.Side
 import net.minecraftforge.fml.relauncher.SideOnly
 import org.lwjgl.input.Keyboard
 import java.awt.Color
-import terminal.messages.*
+import messages.*
 
 @SideOnly(Side.CLIENT)
 class SystemScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
@@ -42,17 +42,19 @@ class SystemScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
     val system = te.system
     val os = system.os!!
     val terminal = os.terminal
-    val currentDirectory = os.fileSystem.currentDirectory
+    val currentDirectory
+        get() = os.fileSystem.currentDirectory
 
     /*var mode = 0
         set(m){
             this.lines.clear()
             field = m
         }*/
-    val preText = "${currentDirectory.path} > "
+    var preText = ""
 
     override fun initGui() {
         super.initGui()
+        this.preText = "${this.currentDirectory.path} >"
         this.w = this.width - 35.0
         this.h = this.height - 35.0
         textField.isFocused = true
@@ -67,10 +69,12 @@ class SystemScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
                 val rawtext = textField.text
                 val text = rawtext.substring(rawtext.lastIndexOf(preText) + preText.length until rawtext.length)
                 lines.add(text)
-                commandHistory.add(text)
+                if(rawtext != preText) {
+                    commandHistory.add(text)
+                    sendCommand(text)
+                    saveTermHistory()
+                }
                 textField.text = preText
-                sendCommand(text)
-                saveTermHistory()
                 return
             }
             Keyboard.KEY_BACK -> {
@@ -82,9 +86,18 @@ class SystemScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
     }
 
     fun printToScreen(string: String){
-        lines.add(string)
-        textField.text = preText
-        this.resetCaretLocation()
+        if(string.contains("\t")){
+            val new = string.substring(string.indexOf("\t") + 1)
+            val tabbed = "  $new"
+            lines.add(tabbed)
+        }else{
+            lines.add(string)
+        }
+    }
+
+    fun clearScreen(){
+        this.commandHistory.clear()
+        this.modifyTerminalHistory { it.clear() }
     }
 
     fun sendCommand(commandStr: String){
@@ -107,6 +120,7 @@ class SystemScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
             val (index, s) = i
             this.fontRenderer.drawString(s, cx.toInt(), cy.toInt() + (8 * index), Color.WHITE.rgb)
         }
+        this.resetCaretLocation()
     }
 
     fun saveTermHistory(){
@@ -115,7 +129,6 @@ class SystemScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
 
     fun loadTerminalHistory(history: ArrayList<String>){
         this.commandHistory = history
-        resetCaretLocation()
     }
 
     fun modifyTerminalHistory(callback: (ArrayList<String>)->Unit){
@@ -129,6 +142,7 @@ class SystemScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
 
     override fun updateScreen() {
         super.updateScreen()
+        this.preText = "${this.currentDirectory.path} >"
         this.textField.updateCursorCounter()
     }
 }

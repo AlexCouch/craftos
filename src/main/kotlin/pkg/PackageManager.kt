@@ -1,7 +1,6 @@
 package pkg
 
 import net.minecraft.entity.player.EntityPlayerMP
-import network.NetworkPort
 import os.OperatingSystem
 import terminal.Terminal
 import utils.printstr
@@ -36,6 +35,7 @@ class PackageManager(val terminal: Terminal){
     }
 }
 
+/*
 object NetworkingPackage : Package{
     override val name: String
         get() = "cnetman"
@@ -66,4 +66,4 @@ object NetworkingPackage : Package{
         }
     }
 
-}
+}*/

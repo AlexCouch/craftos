@@ -1,10 +1,12 @@
 package terminal
 
+import blocks.TileEntityDesktopComputer
 import modid
 import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.util.ResourceLocation
 import utils.printstr
-import terminal.messages.*
+import messages.*
+import net.minecraftforge.fml.relauncher.Side
 
 interface TerminalCommand{
     val name: ResourceLocation
@@ -44,8 +46,14 @@ object ListFilesCommand : TerminalCommand{
     override val name: ResourceLocation
         get() = ResourceLocation(modid, "lf")
     override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
-        get() = { _, terminal, _ ->
-            terminal.sendMessageToServer(GetCurrentDirectoryFilesMessage(terminal.os.system.te.pos))
+        get() = { player, terminal, _ ->
+            val os = terminal.os
+            val fs = os.fileSystem
+            val files = fs.currentDirectory.files
+            terminal.printStringServer("Files in current directory:", player)
+            files.forEach {
+                terminal.printStringServer("\t${it.name}", player)
+            }
         }
 
 }
@@ -71,9 +79,7 @@ object ClearCommand : TerminalCommand{
     override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
         get() = {_,terminal, _ ->
             if(terminal is CouchTerminal){
-                terminal.os.screen?.modifyTerminalHistory {
-                    it.clear()
-                }
+                terminal.os.screen?.clearScreen()
             }
         }
 }
