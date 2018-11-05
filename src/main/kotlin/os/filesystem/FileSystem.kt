@@ -5,10 +5,12 @@ import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.nbt.NBTTagCompound
 import os.OperatingSystem
 import messages.*
+import net.minecraft.client.Minecraft
+import utils.getCurrentComputer
 import utils.printstr
 
 class FileSystem(private val os: OperatingSystem){
-    private val root = Folder("root", NBTTagCompound())
+    private var root = Folder("root", NBTTagCompound())
     var currentDirectory = root
 
     fun relocate(dirName: String): Boolean{
@@ -32,16 +34,24 @@ class FileSystem(private val os: OperatingSystem){
     }
 
     private fun syncWithClient(){
-        val cddata = this.currentDirectory.data
-        val nbt = NBTTagCompound()
-        nbt.setString("name", this.currentDirectory.name)
-        nbt.setTag("data", cddata)
-        this.os.terminal.sendMessageToClient(
-                SyncFileSystemClientMessage(
-                        this.os.system.te.pos,
-                        nbt
-                ),
-                (this.os.system.te as TileEntityDesktopComputer).player as EntityPlayerMP)
+        val prepareData = {
+            val cddata = this.currentDirectory.data
+            val nbt = NBTTagCompound()
+            nbt.setString("name", this.currentDirectory.name)
+            nbt.setTag("data", cddata)
+            nbt
+        }
+        val processData: ProcessData = { data, world, pos, player ->
+            val comp = getCurrentComputer(world, pos, player)!!
+            val system = comp.system
+            val os = system.os!!
+            val fname = data.getString("name")
+            val fdata = data.getCompoundTag("data")
+            val currdir = Folder(fname, fdata)
+            os.fileSystem.currentDirectory = currdir
+        }
+        val player = (this.os.system.te as TileEntityDesktopComputer).player as EntityPlayerMP
+        MessageFactory.sendDataToClient(player, this.os.system.te.pos, prepareData, processData)
     }
 
     fun makeDirectory(dirName: String, callback: (() -> NBTTagCompound)?): Boolean{
@@ -112,7 +122,7 @@ class FileSystem(private val os: OperatingSystem){
     fun serialize(): NBTTagCompound = root.data
 
     fun deserialize(nbt: NBTTagCompound){
-        root.deserialize(nbt)
+        root = Folder("root", nbt)
     }
 }
 
@@ -123,6 +133,10 @@ open class File constructor(val name: String, var data: NBTTagCompound){
 
 open class Folder constructor(name: String, data: NBTTagCompound) : File(name, data){
     val files: ArrayList<File> = arrayListOf()
+
+    init{
+        deserialize(data)
+    }
 
     fun addFile(file: File){
         files += file
@@ -156,12 +170,15 @@ open class Folder constructor(name: String, data: NBTTagCompound) : File(name, d
                 if(type == "folder"){
                     val folder = Folder(name, data)
                     this.files += folder
+                }else{
+                    val file = File(name, data)
+                    this.files += file
                 }
                 if(parent.hasKey("name") && parent.hasKey("parentData")){
                     val pname = parent.getString("name")
                     val pdata = parent.getCompoundTag("parentData")
-                    val pfile = Folder(pname, NBTTagCompound())
-                    pfile.deserialize(pdata)
+                    val pfile = Folder(pname, pdata)
+                    this.parent = pfile
                 }
             }
         }

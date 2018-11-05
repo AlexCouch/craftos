@@ -18,7 +18,6 @@ import net.minecraft.creativetab.CreativeTabs
 import net.minecraft.nbt.NBTBase
 import net.minecraft.network.NetworkManager
 import net.minecraft.network.play.server.SPacketUpdateTileEntity
-import stream
 import system.CouchDesktopSystem
 import messages.*
 
@@ -35,11 +34,7 @@ object DesktopComputerBlock : Block(Material.IRON), ITileEntityProvider {
             val te = worldIn.getTileEntity(pos) ?: throw IllegalStateException("No tile entity placed! Report to author!")
             if(te is TileEntityDesktopComputer){
                 te.player = playerIn as EntityPlayerMP
-                if (te.started) {
-                    stream.sendTo(OpenGuiMessage(0), playerIn)
-                } else {
-                    te.startup()
-                }
+                te.startup()
             }else{
                 throw IllegalStateException("No desktop tile entity placed! What did you do??????")
             }

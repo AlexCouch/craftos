@@ -15,8 +15,11 @@ import net.minecraftforge.fml.relauncher.SideOnly
 import org.lwjgl.input.Keyboard
 import java.awt.Color
 import messages.*
-import stream
+import net.minecraft.entity.player.EntityPlayerMP
+import net.minecraft.nbt.NBTTagCompound
+import DevicesPlus
 import system.CouchDesktopSystem
+import utils.getCurrentComputer
 
 @SideOnly(Side.CLIENT)
 class SystemScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
@@ -47,11 +50,6 @@ class SystemScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
     val currentDirectory
         get() = os.fileSystem.currentDirectory
 
-    /*var mode = 0
-        set(m){
-            this.lines.clear()
-            field = m
-        }*/
     var preText = "${this.currentDirectory.path} >"
         set(pt){
             val rawText = textField.text
@@ -79,7 +77,6 @@ class SystemScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
                     lines.add(rawtext)
                     commandHistory.add(text)
                     sendCommand(text)
-                    saveTermHistory()
                 }else{
                     lines.add(text)
                 }
@@ -90,8 +87,19 @@ class SystemScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
                 val text = textField.text
                 if (text == preText) return
             }
+            Keyboard.KEY_ESCAPE -> {
+                shutdown()
+            }
         }
         this.textField.textboxKeyTyped(typedChar, keyCode)
+    }
+
+    private fun shutdown(){
+        val prepareData = { NBTTagCompound() }
+        val processData: ProcessData = { _, world, pos, player ->
+            val comp = getCurrentComputer(world, pos, player)!!
+            comp.started = false
+        }
     }
 
     fun printToScreen(string: String){
@@ -106,7 +114,7 @@ class SystemScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
 
     fun clearScreen(){
         this.commandHistory.clear()
-        this.modifyTerminalHistory { it.clear() }
+        this.lines.clear()
     }
 
     fun sendCommand(commandStr: String){
@@ -132,19 +140,6 @@ class SystemScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
         this.resetCaretLocation()
     }
 
-    fun saveTermHistory(){
-        terminal.sendMessageToServer(SaveTermHistoryInMemory(commandHistory, this.te.pos))
-    }
-
-    fun loadTerminalHistory(history: ArrayList<String>){
-        this.commandHistory = history
-    }
-
-    fun modifyTerminalHistory(callback: (ArrayList<String>)->Unit){
-        callback(this.lines)
-        saveTermHistory()
-    }
-
     fun resetCaretLocation(){
         textField.y = (y + 15 + (8 * this.lines.size)).toInt()
     }
@@ -157,7 +152,7 @@ class SystemScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
 }
 
 @SideOnly(Side.CLIENT)
-class BootScreen(private val blockpos: BlockPos) : GuiScreen(){
+class BootScreen(private val system: CouchDesktopSystem) : GuiScreen(){
     private val x = 30
     private val y = 20
     private val w by lazy{ this.width - 35 }
@@ -178,9 +173,30 @@ class BootScreen(private val blockpos: BlockPos) : GuiScreen(){
     override fun keyTyped(typedChar: Char, keyCode: Int) {
         if(allowInput){
             if(keyCode == Keyboard.KEY_RETURN){
-                stream.sendToServer(StartTerminalMessage(blockpos))
+                startTerminal()
             }
         }
+    }
+
+    private fun startTerminal(){
+        val prepareMessageData = { NBTTagCompound() }
+        val processMessageData: ProcessData = { _, world, pos, player ->
+            val comp = getCurrentComputer(world, pos, player)!!
+            val terminal = comp.system.os!!.terminal
+            terminal.start(player as EntityPlayerMP)
+        }
+        val prepareResponseData = { NBTTagCompound() }
+        val processResponseData: ProcessData = { _, world, pos, player ->
+            player.openGui(DevicesPlus, 0, world, pos.x, pos.y, pos.z)
+        }
+        MessageFactory.sendDataToClientWithResponse(
+                this.system.desktop.pos,
+                this.system.player as EntityPlayerMP,
+                prepareMessageData,
+                processMessageData,
+                prepareResponseData,
+                processResponseData
+        )
     }
 
     override fun drawScreen(mouseX: Int, mouseY: Int, partialTicks: Float) {
@@ -196,11 +212,11 @@ class BootScreen(private val blockpos: BlockPos) : GuiScreen(){
 
 object GuiRegistry : IGuiHandler{
     override fun getClientGuiElement(ID: Int, player: EntityPlayer, world: World, x: Int, y: Int, z: Int): Any?{
+        val te = Minecraft.getMinecraft().world.getTileEntity(BlockPos(x, y, z)) as TileEntityDesktopComputer
         if(ID == 0){
-            val te = Minecraft.getMinecraft().world.getTileEntity(BlockPos(x, y, z)) as TileEntityDesktopComputer
             return SystemScreen(te)
         }else if(ID == 1){
-            return BootScreen(BlockPos(x, y, z))
+            return BootScreen(te.system)
         }
         return null
     }

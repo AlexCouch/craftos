@@ -1,5 +1,6 @@
 package os.couch
 
+import client.BootScreen
 import client.SystemScreen
 import net.minecraft.client.Minecraft
 import net.minecraft.entity.player.EntityPlayerMP
@@ -11,11 +12,9 @@ import network.Port
 import os.OperatingSystem
 import os.filesystem.FileSystem
 import os.filesystem.Folder
-import stream
 import system.CouchDesktopSystem
 import terminal.*
 import messages.*
-import utils.printstr
 
 class CouchOS(override val system: CouchDesktopSystem) : OperatingSystem {
     override val terminal: Terminal = CouchTerminal(this)
@@ -36,7 +35,19 @@ class CouchOS(override val system: CouchDesktopSystem) : OperatingSystem {
 
     private fun printToBootScreen(message: String){
         println(message)
-        stream.sendTo(PrintToBootScreenMessage(message, system.desktop.pos), system.player as EntityPlayerMP)
+        val prepareData = {
+            val nbt = NBTTagCompound()
+            nbt.setString("message", message)
+            nbt
+        }
+        val processData: ProcessData = { data, _, _, _ ->
+            val str = data.getString("message")
+            val cs = Minecraft.getMinecraft().currentScreen
+            if(cs is BootScreen){
+                cs.printToScreen(str)
+            }
+        }
+        MessageFactory.sendDataToClient(system.player as EntityPlayerMP, this.system.desktop.pos, prepareData, processData)
     }
 
     override fun start() {
@@ -57,7 +68,18 @@ class CouchOS(override val system: CouchDesktopSystem) : OperatingSystem {
         printToBootScreen("\tFile system setup complete!")
         printToBootScreen("")
         printToBootScreen("Operating system ready...press enter to continue...")
-        stream.sendTo(UnlockBootScreenInputMessage(this.system.desktop.pos), this.system.player as EntityPlayerMP)
+        unlockBootScreenInput()
+    }
+
+    private fun unlockBootScreenInput(){
+        val prepareData = { NBTTagCompound() }
+        val processData: ProcessData = { _, _, _, _ ->
+            val currentScreen = Minecraft.getMinecraft().currentScreen
+            if(currentScreen is BootScreen){
+                currentScreen.allowInput = true
+            }
+        }
+        MessageFactory.sendDataToClient(this.system.player as EntityPlayerMP, this.system.desktop.pos, prepareData, processData)
     }
 
     override fun serializeOS(): NBTTagCompound{

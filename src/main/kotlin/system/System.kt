@@ -1,15 +1,17 @@
 package system
 
 import blocks.TileEntityDesktopComputer
+import messages.MessageFactory
+import messages.ProcessData
 import net.minecraft.nbt.NBTTagCompound
 import os.OperatingSystem
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.util.text.TextComponentString
 import network.Port
-import messages.StartOSBootMessage
-import net.minecraft.entity.player.EntityPlayerMP
-import stream
 import os.couch.*
+import DevicesPlus
+import net.minecraft.entity.player.EntityPlayerMP
+import utils.getCurrentComputer
 
 class CouchDesktopSystem(val desktop: TileEntityDesktopComputer) : DeviceSystem<TileEntityDesktopComputer>{
     override var os: OperatingSystem? = CouchOS(this)
@@ -29,7 +31,27 @@ class CouchDesktopSystem(val desktop: TileEntityDesktopComputer) : DeviceSystem<
     override fun start() {
         //load up ROM, and check all hardware for faults
         this.player.sendStatusMessage(TextComponentString("System started..."), true)
-        stream.sendTo(StartOSBootMessage(this.desktop.pos), this.player as EntityPlayerMP)
+        startOS()
+    }
+
+    private fun startOS(){
+        val prepareMessageData = { NBTTagCompound() }
+        val processMessageData: ProcessData = { _, world, pos, player ->
+            player.openGui(DevicesPlus, 1, world, pos.x, pos.y, pos.z)
+        }
+        val prepareResponseData = { NBTTagCompound() }
+        val processResponseData: ProcessData = { _, world, pos, player ->
+            val comp = getCurrentComputer(world, pos, player)!!
+            comp.system.os?.start()
+        }
+        MessageFactory.sendDataToClientWithResponse(
+                this.desktop.pos,
+                this.player as EntityPlayerMP,
+                prepareMessageData,
+                processMessageData,
+                prepareResponseData,
+                processResponseData
+        )
     }
 
     override fun serialize(): NBTTagCompound {
@@ -139,8 +161,6 @@ class Memory(val space: Long, var storedMemory: NBTTagCompound){
         return nbt
     }
 }
-
-data class OSBootableMedium(val name: String, val os: OperatingSystem)
 
 interface DeviceSystem<T : TileEntity>{
     var name: String
