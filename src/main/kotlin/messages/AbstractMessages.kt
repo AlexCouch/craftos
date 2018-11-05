@@ -88,9 +88,9 @@ object CommonDataSpace{
         this.responsiveDataPackets += (name to data)
     }
 
-    fun retrieveDataPacket(name: String) = this.dataPackets[name]
+    fun retrieveDataPacket(name: String) = this.dataPackets - name
 
-    fun retrieveResponsiveDataPacket(name: String) = this.responsiveDataPackets[name]
+    fun retrieveResponsiveDataPacket(name: String) = this.responsiveDataPackets - name
 }
 
 data class DataPacket(val prepareMessageData: () -> NBTTagCompound, val processMessageData: ProcessData)
