@@ -22,6 +22,7 @@ class ClientSideMessage() : BasicSidedMessage(){
             val postag = d.getCompoundTag("pos")
             this.pos = NBTUtil.getPosFromTag(postag)
             this.data = packet
+            this.dataPacket = CommonDataSpace.retrieveDataPacket("client_data") ?: return
         }
     }
 
@@ -30,6 +31,7 @@ class ClientSideMessage() : BasicSidedMessage(){
         d.setTag("packet", this.dataPacket?.prepareMessageData?.invoke() ?: NBTTagCompound())
         d.setTag("pos", NBTUtil.createPosTag(this.pos))
         ByteBufUtils.writeTag(buf, d)
+        CommonDataSpace.storeDataPackets("client_data", this.dataPacket ?: return)
     }
 
 }

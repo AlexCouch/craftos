@@ -76,6 +76,23 @@ object MessageFactory{
     }
 }
 
+object CommonDataSpace{
+    private val dataPackets = HashMap<String, DataPacket>()
+    private val responsiveDataPackets = HashMap<String, ResponsiveDataPacket>()
+
+    fun storeDataPackets(name: String, data: DataPacket){
+        this.dataPackets += (name to data)
+    }
+
+    fun storeResponsiveDataPackets(name: String, data: ResponsiveDataPacket){
+        this.responsiveDataPackets += (name to data)
+    }
+
+    fun retrieveDataPacket(name: String) = this.dataPackets[name]
+
+    fun retrieveResponsiveDataPacket(name: String) = this.responsiveDataPackets[name]
+}
+
 data class DataPacket(val prepareMessageData: () -> NBTTagCompound, val processMessageData: ProcessData)
 
 data class ResponsiveDataPacket(

@@ -189,9 +189,8 @@ class BootScreen(private val system: CouchDesktopSystem) : GuiScreen(){
         val processResponseData: ProcessData = { _, world, pos, player ->
             player.openGui(DevicesPlus, 0, world, pos.x, pos.y, pos.z)
         }
-        MessageFactory.sendDataToClientWithResponse(
+        MessageFactory.sendDataToServerWithResponse(
                 this.system.desktop.pos,
-                this.system.player as EntityPlayerMP,
                 prepareMessageData,
                 processMessageData,
                 prepareResponseData,
@@ -212,7 +211,7 @@ class BootScreen(private val system: CouchDesktopSystem) : GuiScreen(){
 
 object GuiRegistry : IGuiHandler{
     override fun getClientGuiElement(ID: Int, player: EntityPlayer, world: World, x: Int, y: Int, z: Int): Any?{
-        val te = Minecraft.getMinecraft().world.getTileEntity(BlockPos(x, y, z)) as TileEntityDesktopComputer
+        val te = getCurrentComputer(world, BlockPos(x, y, z), player) ?: return null
         if(ID == 0){
             return SystemScreen(te)
         }else if(ID == 1){

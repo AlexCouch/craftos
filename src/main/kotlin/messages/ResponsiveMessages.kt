@@ -21,6 +21,7 @@ class ResponsiveServerMessage() : ResponsiveSidedMessage(){
             val postag = d.getCompoundTag("pos")
             this.pos = NBTUtil.getPosFromTag(postag)
             this.data = packet
+            this.dataPacket = CommonDataSpace.retrieveResponsiveDataPacket("responsive_server_message") ?: return
         }
     }
 
@@ -29,6 +30,7 @@ class ResponsiveServerMessage() : ResponsiveSidedMessage(){
         d.setTag("packet", this.dataPacket?.prepareMessageData?.invoke() ?: NBTTagCompound())
         d.setTag("pos", NBTUtil.createPosTag(this.pos))
         ByteBufUtils.writeTag(buf, d)
+        CommonDataSpace.storeResponsiveDataPackets("responsive_server_message", this.dataPacket ?: return)
     }
 
 }
@@ -62,6 +64,7 @@ class ResponsiveClientMessage() : ResponsiveSidedMessage(){
             val postag = d.getCompoundTag("pos")
             this.pos = NBTUtil.getPosFromTag(postag)
             this.data = packet
+            this.dataPacket = CommonDataSpace.retrieveResponsiveDataPacket("client_responsive_data") ?: return
         }
     }
 
@@ -70,6 +73,7 @@ class ResponsiveClientMessage() : ResponsiveSidedMessage(){
         d.setTag("packet", this.dataPacket?.prepareMessageData?.invoke() ?: NBTTagCompound())
         d.setTag("pos", NBTUtil.createPosTag(this.pos))
         ByteBufUtils.writeTag(buf, d)
+        CommonDataSpace.storeResponsiveDataPackets("client_responsive_data", this.dataPacket ?: return)
     }
 
 }
