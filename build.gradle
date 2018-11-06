@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin = '1.2.41'
+    ext.kotlin = '1.2.71'
     repositories {
         jcenter()
         maven { url = "http://files.minecraftforge.net/maven" }
@@ -13,9 +13,9 @@ apply plugin: 'net.minecraftforge.gradle.forge'
 //Only edit below this line, the above code adds and enables the necessary things for Forge to be setup.
 apply plugin: 'idea'
 
-version = "1.0"
-group = "alexcouch.device+" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
-archivesBaseName = "modid"
+version = "0.0.2"
+group = "alexcouch.craftos" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
+archivesBaseName = "craftos"
 
 sourceCompatibility = targetCompatibility = '1.8' // Need this here so eclipse task generates correctly.
 compileJava {
