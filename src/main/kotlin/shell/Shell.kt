@@ -1,21 +1,19 @@
-package terminal
+package shell
 
+import client.TerminalScreen
 import net.minecraft.entity.player.EntityPlayerMP
 import os.OperatingSystem
 import os.couch.CouchOS
 import pkg.*
 import messages.*
-import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.nbt.NBTTagList
 import net.minecraft.nbt.NBTTagString
 import net.minecraft.util.math.BlockPos
-import net.minecraft.world.World
 import net.minecraftforge.common.util.Constants
 import utils.getCurrentComputer
-import utils.printstr
 
-abstract class Terminal(open val os: OperatingSystem){
+abstract class Shell(open val os: OperatingSystem){
     abstract val commands: ArrayList<TerminalCommand>
     abstract val packageManager: PackageManager
 
@@ -30,7 +28,7 @@ abstract class Terminal(open val os: OperatingSystem){
 
     open fun getCommand(name: String): TerminalCommand = commands.stream().filter { it.name.resourcePath == name }.findFirst().get()
 
-    open fun getPackage(name: String): Package = packageManager.installedPackages.stream().filter { it.name == name }.findFirst().get()
+    /*open fun getPackage(name: String): Package = packageManager.installedPackages.stream().filter { it.name == name }.findFirst().get()
 
     open fun verifyCommandOrPackage(commandName: String): Boolean = when {
         commands.stream().anyMatch { it.name.resourcePath == commandName } -> true
@@ -39,7 +37,7 @@ abstract class Terminal(open val os: OperatingSystem){
             printstr("There is no command or package with that name: $commandName")
             false
         }
-    }
+    }*/
 
     open fun openPackage(opener: EntityPlayerMP, pack: Package, args: Array<String>){
         pack.func(opener, this.os, arrayListOf(*args))
@@ -50,7 +48,7 @@ abstract class Terminal(open val os: OperatingSystem){
     }
 }
 
-class CouchTerminal(override val os: CouchOS) : Terminal(os){
+class CouchShell(override val os: CouchOS) : Shell(os){
     override val commands: ArrayList<TerminalCommand> = arrayListOf()
     override val packageManager: PackageManager = PackageManager(this)
 
@@ -63,14 +61,16 @@ class CouchTerminal(override val os: CouchOS) : Terminal(os){
         val processData: ProcessData = { data, world, bp, p ->
             val str = data.getString("string")
             val te = getCurrentComputer(world, bp, p)!!
-            val screen = te.system.os!!.screen!!
-            screen.printToScreen(str)
+            te.system.os?.shell?.printStringClient(str)
         }
         MessageFactory.sendDataToClient(player, pos, prepareData, processData)
     }
 
     override fun printStringClient(string: String) {
-        this.os.screen!!.printToScreen(string)
+        val screen = this.os.screenAbstract!!
+        if(screen is TerminalScreen){
+            screen.printToScreen(string)
+        }
     }
 
     override fun sendCommand(commandName: String, commandArgs: Array<String>){
@@ -84,7 +84,7 @@ class CouchTerminal(override val os: CouchOS) : Terminal(os){
             nbt.setTag("args", argsList)
             nbt
         }
-        val processData: (data: NBTTagCompound, world: World, pos: BlockPos, player: EntityPlayer) -> Unit = { data, world, pos, player ->
+        val processData: ProcessData = { data, world, pos, player ->
             if(data.hasKey("name") && data.hasKey("args")){
                 val name = data.getString("name")
                 val te = getCurrentComputer(world, pos, player)!!
@@ -94,12 +94,12 @@ class CouchTerminal(override val os: CouchOS) : Terminal(os){
                     val str = (a as NBTTagString).string
                     args += str
                 }
-                val terminal = te.system.os?.terminal!!
-                val command = terminal.getCommand(name)
-                te.system.os?.terminal?.executeCommand(player as EntityPlayerMP, command, args.toTypedArray())
+                val shell = te.system.os?.shell!!
+                val command = shell.getCommand(name)
+                shell.executeCommand(player as EntityPlayerMP, command, args.toTypedArray())
             }
         }
-        MessageFactory.sendDataToServer(this.os.screen!!.te.pos, prepareData, processData)
+        MessageFactory.sendDataToServer(this.os.system.desktop.pos, prepareData, processData)
     }
 
     override fun start(player: EntityPlayerMP) {

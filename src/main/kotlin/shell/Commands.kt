@@ -1,4 +1,4 @@
-package terminal
+package shell
 
 import messages.MessageFactory
 import messages.ProcessData
@@ -10,12 +10,12 @@ import utils.getCurrentComputer
 
 interface TerminalCommand{
     val name: ResourceLocation
-    val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
+    val execute: (EntityPlayerMP, Shell, Array<String>) -> Unit
 }
 
 object PackageManagerCommand : TerminalCommand{
     override val name: ResourceLocation = ResourceLocation(modid, "pakker")
-    override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit = {
+    override val execute: (EntityPlayerMP, Shell, Array<String>) -> Unit = {
         player, terminal, args ->
         if(args.size == 2) {
             if (args[0] == "-i") {
@@ -34,7 +34,7 @@ object PackageManagerCommand : TerminalCommand{
 object EchoCommand : TerminalCommand{
     override val name: ResourceLocation
         get() = ResourceLocation(modid, "echo")
-    override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
+    override val execute: (EntityPlayerMP, Shell, Array<String>) -> Unit
         get() = {player, terminal, args ->
             val sb = StringBuilder()
             args.forEachIndexed { i, s ->
@@ -47,7 +47,7 @@ object EchoCommand : TerminalCommand{
 object ListFilesCommand : TerminalCommand{
     override val name: ResourceLocation
         get() = ResourceLocation(modid, "ls")
-    override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
+    override val execute: (EntityPlayerMP, Shell, Array<String>) -> Unit
         get() = { player, terminal, _ ->
             val os = terminal.os
             val fs = os.fileSystem
@@ -63,7 +63,7 @@ object ListFilesCommand : TerminalCommand{
 object RelocateCommand : TerminalCommand{
     override val name: ResourceLocation
         get() = ResourceLocation(modid, "cd")
-    override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
+    override val execute: (EntityPlayerMP, Shell, Array<String>) -> Unit
         get() = { player, terminal, args ->
             if(args.size == 1){
                 val name = args[0]
@@ -80,13 +80,13 @@ object RelocateCommand : TerminalCommand{
 object ClearCommand : TerminalCommand{
     override val name: ResourceLocation
         get() = ResourceLocation(modid, "clear")
-    override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
+    override val execute: (EntityPlayerMP, Shell, Array<String>) -> Unit
         get() = {player ,terminal, _ ->
-            if(terminal is CouchTerminal){
+            if(terminal is CouchShell){
                 val prepareData = { NBTTagCompound() }
                 val processData: ProcessData = {_, world, pos, p ->
                     val te = getCurrentComputer(world, pos, p)!!
-                    te.system.os?.screen?.clearScreen()
+                    te.system.os?.screenAbstract?.clearScreen()
                 }
                 MessageFactory.sendDataToClient(player, terminal.os.system.desktop.pos, prepareData, processData)
             }
@@ -96,7 +96,7 @@ object ClearCommand : TerminalCommand{
 object MakeFileCommand : TerminalCommand{
     override val name: ResourceLocation
         get() = ResourceLocation(modid, "mkf")
-    override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
+    override val execute: (EntityPlayerMP, Shell, Array<String>) -> Unit
         get() = { player, terminal, args ->
             if(args.size == 1){
                 val name = args[0]
@@ -111,7 +111,7 @@ object MakeFileCommand : TerminalCommand{
 object MakeDirCommand : TerminalCommand{
     override val name: ResourceLocation
         get() = ResourceLocation(modid, "mkdir")
-    override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
+    override val execute: (EntityPlayerMP, Shell, Array<String>) -> Unit
         get() = { player, terminal, args ->
             if(args.size == 1){
                 val name = args[0]
@@ -125,7 +125,7 @@ object MakeDirCommand : TerminalCommand{
 
 object DeleteFileCommand : TerminalCommand{
     override val name: ResourceLocation = ResourceLocation(modid, "rm")
-    override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
+    override val execute: (EntityPlayerMP, Shell, Array<String>) -> Unit
             get() = { player, terminal, args ->
                 if(args.size == 1){
                     val name = args[0]
@@ -141,7 +141,7 @@ object DeleteFileCommand : TerminalCommand{
 object DeleteDirectoryCommand : TerminalCommand{
     override val name: ResourceLocation
         get() = ResourceLocation(modid, "rmd")
-    override val execute: (EntityPlayerMP, Terminal, Array<String>) -> Unit
+    override val execute: (EntityPlayerMP, Shell, Array<String>) -> Unit
         get() = { player, terminal, args ->
             if(args.size == 1){
                 val name = args[0]

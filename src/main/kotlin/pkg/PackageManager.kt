@@ -1,69 +1,93 @@
 package pkg
 
+import client.AbstractSystemScreen
+import client.GuiRegistry
+import messages.ProcessData
 import net.minecraft.entity.player.EntityPlayerMP
+import net.minecraft.nbt.NBTTagCompound
 import os.OperatingSystem
-import terminal.Terminal
+import shell.Shell
+import system.CouchDesktopSystem
 import utils.printstr
+import DevicesPlus
+import messages.MessageFactory
 
-interface Package{
-    val name: String
-    val version: String
-    fun func(player: EntityPlayerMP, os: OperatingSystem, args: ArrayList<String>)
+abstract class Package(val system: CouchDesktopSystem){
+    abstract val name: String
+    abstract val version: String
+    abstract fun init()
+    abstract fun onUpdate()
 }
 
-class PackageManager(val terminal: Terminal){
+abstract class RenderablePackage(system: CouchDesktopSystem) : Package(system){
+    abstract val renderer: AbstractSystemScreen
+
+    override fun init() {
+        GuiRegistry.registerGui("${this.name}_renderer", this.renderer)
+
+        val prepareData: () -> NBTTagCompound = {
+            val nbt = NBTTagCompound()
+            nbt.setString("pack_name", this.name)
+            nbt
+        }
+        val processData: ProcessData = { nbt, world, pos, player ->
+            val name = nbt.getString("pack_name")
+            GuiRegistry.openGui(name, player, world, pos)
+        }
+        MessageFactory.sendDataToClient(system.player as EntityPlayerMP, system.desktop.pos, prepareData, processData)
+    }
+}
+
+class PackageManager(val shell: Shell){
     val availablePackages = hashSetOf<Package>()
     val installedPackages = hashSetOf<Package>()
 
-    init{
-//        availablePackages += NetworkingPackage
-//        installedPackages += NetworkingPackage
+    private val system = shell.os.system as CouchDesktopSystem
+
+    fun isPackageInstalled(name: String) = installedPackages.stream().anyMatch { it.name == name }
+    fun isPackageAvailable(name: String) = availablePackages.stream().anyMatch { it.name == name }
+    fun getAvailablePackage(name: String): Package?{
+        if(isPackageAvailable(name)){
+            val filteredPack = availablePackages.stream().filter { it.name == name }.findFirst()
+            if(filteredPack.isPresent){
+                return filteredPack.get()
+            }
+        }
+        this.shell.printStringServer("Could not find available package of name '$name'.", system.desktop.pos, system.player as EntityPlayerMP)
+        return null
+    }
+
+    fun getInstalledPackage(name: String): Package?{
+        if(isPackageInstalled(name)){
+            val filteredPack = installedPackages.stream().filter { it.name == name }.findFirst()
+            if(filteredPack.isPresent){
+                return filteredPack.get()
+            }
+        }
+        this.shell.printStringServer("Could not find installed package of name '$name'.", system.desktop.pos, system.player as EntityPlayerMP)
+        return null
     }
 
     fun installPackage(packname: String){
-        if(availablePackages.stream().anyMatch { it.name == packname }){
-            val pack = availablePackages.stream().filter { it.name == packname }.findFirst().get()
-            if(installedPackages.stream().anyMatch { it.name == pack.name }){
-                printstr("That package is already installed: $packname", this.terminal)
+        if(isPackageAvailable(packname)){
+            val pack = getAvailablePackage(packname) ?: return
+            if(isPackageInstalled(packname)){
+                printstr("That package is already installed: $packname", this.shell)
                 return
             }
             this.installedPackages += pack
-            printstr("Package '$packname' has been installed.", this.terminal)
+            this.shell.printStringServer("Package $packname has been successfully installed!", system.desktop.pos, system.player as EntityPlayerMP)
             return
         }
-        printstr("There is no such package with name: '$packname'", this.terminal)
+        this.shell.printStringServer("There is no package with name $packname.", system.desktop.pos, system.player as EntityPlayerMP)
+    }
+
+    fun uninstallPackage(name: String){
+        if(isPackageInstalled(name)){
+            val installedPackage = getInstalledPackage(name) ?: return
+            this.installedPackages.remove(installedPackage)
+            this.shell.printStringServer("Package '$name' has been uninstalled!", system.desktop.pos, system.player as EntityPlayerMP)
+        }
+        this.shell.printStringServer("There is no package installed with name '$name'.", system.desktop.pos, system.player as EntityPlayerMP)
     }
 }
-
-/*
-object NetworkingPackage : Package{
-    override val name: String
-        get() = "cnetman"
-    override val version: String
-        get() = "1.0"
-
-    override fun func(player: EntityPlayerMP, os: OperatingSystem, args: ArrayList<String>) {
-        if(args.size == 1){
-            if(args[0] == "list"){
-                val ports = os.ports
-                printstr("Found Ports:")
-                ports.forEach {
-                    printstr("\tId: ${it.portId}", os.terminal)
-                    printstr("\tAvailable: ${it.available}", os.terminal)
-                    printstr("\tPort Type: ${it.t?.javaClass?.name}", os.terminal)
-                    printstr("", os.terminal)
-                }
-            }else if(args[0] == "-c"){
-                printstr("Attempting connection with network device ${args[1]}", os.terminal)
-                val name = args[1]
-                printstr("Getting the next available network port...")
-                val nextPort = os.getNextAvailablePort(NetworkPort::class.java) as? NetworkPort ?: return
-                printstr("Starting port...", os.terminal)
-                nextPort.start()
-                printstr("Attempting connection with port to network device $name...")
-                nextPort.connect(name)
-            }
-        }
-    }
-
-}*/

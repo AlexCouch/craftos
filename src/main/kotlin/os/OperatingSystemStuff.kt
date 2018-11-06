@@ -1,19 +1,19 @@
 package os
 
-import client.SystemScreen
+import client.AbstractSystemScreen
 import net.minecraft.nbt.NBTTagCompound
 import network.Port
 import os.filesystem.FileSystem
 import system.DeviceSystem
-import terminal.Terminal
+import shell.Shell
 import utils.printstr
 
 interface OperatingSystem{
     val name: String
     val fileSystem: FileSystem
-    val terminal: Terminal
+    val shell: Shell
     val ports: ArrayList<Port<*>>
-    val screen: SystemScreen?
+    val screenAbstract: AbstractSystemScreen?
     val system: DeviceSystem<*>
 
     fun start()
@@ -28,7 +28,7 @@ interface OperatingSystem{
                 return port
             }
         }
-        printstr("There are no ports available!", this.terminal)
+        printstr("There are no ports available!", this.shell)
         return null
     }
 

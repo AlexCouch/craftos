@@ -5,7 +5,6 @@ import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.nbt.NBTTagCompound
 import os.OperatingSystem
 import messages.*
-import net.minecraft.client.Minecraft
 import utils.getCurrentComputer
 import utils.printstr
 
@@ -26,10 +25,10 @@ class FileSystem(private val os: OperatingSystem){
                 syncWithClient()
                 return true
             }
-            printstr("$dirName is not a directory; rel cancelled!", this.os.terminal)
+            printstr("$dirName is not a directory; rel cancelled!", this.os.shell)
             return false
         }
-        printstr("$dirName does not exist in current directory!", this.os.terminal)
+        printstr("$dirName does not exist in current directory!", this.os.shell)
         return false
     }
 
@@ -56,7 +55,7 @@ class FileSystem(private val os: OperatingSystem){
 
     fun makeDirectory(dirName: String, callback: (() -> NBTTagCompound)?): Boolean{
         if(currentDirectory.files.stream().anyMatch { it.name == dirName }){
-            printstr("File with name '$dirName' already exists.", this.os.terminal)
+            printstr("File with name '$dirName' already exists.", this.os.shell)
             return false
         }
         val data = callback?.invoke() ?: NBTTagCompound()
@@ -68,7 +67,7 @@ class FileSystem(private val os: OperatingSystem){
 
     fun makeFile(fileName: String, callback: (() -> NBTTagCompound)?): Boolean{
         if(currentDirectory.files.stream().anyMatch { it.name == fileName }){
-            printstr("File with name '$fileName' already exists.", this.os.terminal)
+            printstr("File with name '$fileName' already exists.", this.os.shell)
             return false
         }
         val data = callback?.invoke() ?: NBTTagCompound()
@@ -100,7 +99,7 @@ class FileSystem(private val os: OperatingSystem){
             callback(file.data)
             return true
         }
-        printstr("Could not find file with name '$fileName; data was not written.", os.terminal)
+        printstr("Could not find file with name '$fileName; data was not written.", os.shell)
         return false
     }
 
@@ -116,7 +115,7 @@ class FileSystem(private val os: OperatingSystem){
             callback(file.data)
             return
         }
-        printstr("Could not find file with path '$path; data was not written.", os.terminal)
+        printstr("Could not find file with path '$path; data was not written.", os.shell)
     }
 
     fun serialize(): NBTTagCompound = root.data

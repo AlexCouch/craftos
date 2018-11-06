@@ -1,4 +1,4 @@
-package terminal.errors
+package shell.errors
 
 class BadResponseException(reason: String, message: String) :
         Exception("$reason: $message")
@@ -15,7 +15,7 @@ fun throwBadResponse(terminalCommand: String, code: Int){
             "$terminalCommand execute failed! See crash log for more info."
         }
     }
-    throw BadResponseException("A terminal command returned with a bad response", message)
+    throw BadResponseException("A shell command returned with a bad response", message)
 }
 
 fun nullCommand(terminalCommand: String){

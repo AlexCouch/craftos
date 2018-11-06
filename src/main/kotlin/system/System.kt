@@ -10,6 +10,9 @@ import net.minecraft.util.text.TextComponentString
 import network.Port
 import os.couch.*
 import DevicesPlus
+import client.BootScreen
+import client.GuiRegistry
+import client.TerminalScreen
 import net.minecraft.entity.player.EntityPlayerMP
 import utils.getCurrentComputer
 
@@ -30,7 +33,8 @@ class CouchDesktopSystem(val desktop: TileEntityDesktopComputer) : DeviceSystem<
 
     override fun start() {
         //load up ROM, and check all hardware for faults
-        this.player.sendStatusMessage(TextComponentString("System started..."), true)
+        GuiRegistry.registerGui(BootScreen(this))
+        GuiRegistry.registerGui(TerminalScreen(this))
         startOS()
     }
 

@@ -71,7 +71,7 @@ class SystemNetwork(val user: EntityPlayerMP, val system: CouchDesktopSystem){
         val connect = TaskConnect(pos, router.pos)
         connect.setCallback { t, success ->
             if(success){
-                system.os?.terminal?.sendMessageToClient(DisplayStringOnTerminal("Connected to router '${router.id}", pos), user)
+                system.os?.shell?.sendMessageToClient(DisplayStringOnTerminal("Connected to router '${router.id}", pos), user)
             }
         }
         TaskManager.sendTask(connect)
