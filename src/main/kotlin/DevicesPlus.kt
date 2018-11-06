@@ -10,19 +10,12 @@ import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.SidedProxy
 import net.minecraftforge.fml.common.event.FMLInitializationEvent
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent
-import net.minecraftforge.fml.common.event.FMLServerStartingEvent
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.common.network.NetworkRegistry
-import net.minecraftforge.fml.common.registry.GameRegistry
-import net.minecraftforge.fml.relauncher.Side
-import terminal.*
-import terminal.messages.*
 
 const val modid = "devices+"
 const val name = "Devices Plus"
 const val version = "0.1"
-
-val stream = NetworkRegistry.INSTANCE.newSimpleChannel("general")
 
 @Mod(modid=modid, name=name, version=version, modLanguageAdapter = "net.shadowfacts.forgelin.KotlinAdapter")
 object DevicesPlus{
@@ -37,8 +30,6 @@ object DevicesPlus{
 
     @Mod.EventHandler
     fun init(event: FMLInitializationEvent){
-        stream.registerMessage(openTerminalGuiMessageHandler, OpenTerminalGuiMessage::class.java, 0, Side.CLIENT)
-        stream.registerMessage(startTerminalMessageHandler, StartTerminalMessage::class.java, 1, Side.SERVER)
         TileEntity.register("desktop_computer", TileEntityDesktopComputer::class.java)
     }
 }

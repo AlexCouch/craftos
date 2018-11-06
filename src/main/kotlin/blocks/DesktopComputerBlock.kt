@@ -13,23 +13,13 @@ import net.minecraft.util.EnumHand
 import net.minecraft.util.ResourceLocation
 import net.minecraft.util.math.BlockPos
 import net.minecraft.world.World
-import os.OperatingSystem
 import net.minecraft.block.ITileEntityProvider
-import net.minecraft.client.Minecraft
-import net.minecraft.client.multiplayer.WorldClient
 import net.minecraft.creativetab.CreativeTabs
-import net.minecraft.entity.EntityLivingBase
-import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTBase
 import net.minecraft.network.NetworkManager
 import net.minecraft.network.play.server.SPacketUpdateTileEntity
-import net.minecraftforge.fml.common.FMLCommonHandler
-import net.minecraftforge.fml.common.Mod
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
-import net.minecraftforge.fml.common.gameevent.TickEvent
-import stream
 import system.CouchDesktopSystem
-import terminal.messages.OpenTerminalGuiMessage
+import messages.*
 
 object DesktopComputerBlock : Block(Material.IRON), ITileEntityProvider {
     init{
@@ -43,12 +33,8 @@ object DesktopComputerBlock : Block(Material.IRON), ITileEntityProvider {
         if(!worldIn.isRemote && hand == EnumHand.MAIN_HAND){
             val te = worldIn.getTileEntity(pos) ?: throw IllegalStateException("No tile entity placed! Report to author!")
             if(te is TileEntityDesktopComputer){
-                if (te.started) {
-                    te.openGui()
-                } else {
-                    te.player = playerIn as EntityPlayerMP
-                    te.startup()
-                }
+                te.player = playerIn as EntityPlayerMP
+                te.startup()
             }else{
                 throw IllegalStateException("No desktop tile entity placed! What did you do??????")
             }
@@ -63,17 +49,13 @@ object DesktopComputerBlock : Block(Material.IRON), ITileEntityProvider {
 }
 
 class TileEntityDesktopComputer : TileEntity(){
-    var os: OperatingSystem? = null
-
     var storage = NBTTagCompound()
     var started = false
     var player: EntityPlayer? = null
-    val system: CouchDesktopSystem
-        get() = CouchDesktopSystem(this)
+    val system: CouchDesktopSystem = CouchDesktopSystem(this)
 
     fun startup(){
         if(started) return
-        started = true
         started = true
         this.system.start()
         val blockstate = this.world.getBlockState(this.pos)
@@ -87,10 +69,6 @@ class TileEntityDesktopComputer : TileEntity(){
     override fun onDataPacket(net: NetworkManager, pkt: SPacketUpdateTileEntity) {
         super.onDataPacket(net, pkt)
         handleUpdateTag(pkt.nbtCompound)
-    }
-
-    fun openGui(){
-        stream.sendTo(OpenTerminalGuiMessage(this.pos), this.system.player as EntityPlayerMP)
     }
 
     fun writeToStorage(name: String, nbt: NBTBase){

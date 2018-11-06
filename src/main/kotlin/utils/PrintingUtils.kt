@@ -9,11 +9,6 @@ import java.io.OutputStream
 import java.io.PrintStream
 
 fun printstr(string: String, terminal: Terminal? = null){
-    print(string)
-    terminal?.client?.printToScreen(string)
-}
-
-fun printlnstr(string: String, terminal: Terminal? = null){
     println(string)
-    terminal?.client?.printToScreen("$string\n")
+    terminal?.os?.screen?.printToScreen(string)
 }
