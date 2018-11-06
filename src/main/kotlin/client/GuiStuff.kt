@@ -100,6 +100,7 @@ class SystemScreen(val te: TileEntityDesktopComputer) : GuiScreen(){
             val comp = getCurrentComputer(world, pos, player)!!
             comp.started = false
         }
+        MessageFactory.sendDataToServer(this.system.desktop.pos, prepareData, processData)
     }
 
     fun printToScreen(string: String){
