@@ -35,7 +35,7 @@ class ScrollableTextField(
                 fontRenderer,
                 cx,
                 cy,
-                w - 25,
+                w - 5,
                 25
         )
     }
@@ -60,22 +60,10 @@ class ScrollableTextField(
     fun keyTyped(typedChar: Char, keyCode: Int){
         when(keyCode){
             Keyboard.KEY_UP -> {
-                if(this.textField.text.isNotBlank())
-                    this.lines[cpos] = this.textField.text
-                cpos--
-                if(cpos < this.lines.size){
-                    this.textField.text = this.lines[cpos]
-                    this.lines[cpos] = ""
-                }
+                moveLine()
             }
             Keyboard.KEY_DOWN -> {
-                if(this.textField.text.isNotBlank())
-                    this.lines[cpos] = this.textField.text
-                cpos++
-                if(cpos < this.lines.size){
-                    this.textField.text = this.lines[cpos]
-                    this.lines[cpos] = ""
-                }
+                moveLine(false)
             }
             Keyboard.KEY_RETURN -> {
                 if(cpos < this.lines.size)
@@ -83,19 +71,60 @@ class ScrollableTextField(
                 else
                     this.lines.add(this.textField.text)
                 cpos++
-                this.textField.text = ""
-            }
-            Keyboard.KEY_BACK -> {
-                if(this.textField.text.isBlank()){
-                    cpos--
-                    this.textField.text = this.lines[cpos]
-                    this.lines.removeAt(cpos)
-                    this.textField.setCursorPositionEnd()
+                if(this.textField.cursorPosition < this.textField.text.length){
+                    this.lines[cpos - 1] = this.textField.text.substring(0..this.textField.cursorPosition)
+                    this.textField.text = this.textField.text.substring(this.textField.cursorPosition)
+                    this.textField.cursorPosition = 0
                 }else{
-                    this.textField.textboxKeyTyped(typedChar, keyCode)
+                    this.textField.text = ""
                 }
             }
-            else -> this.textField.textboxKeyTyped(typedChar, keyCode)
+            Keyboard.KEY_BACK -> {
+                when {
+                    this.textField.text.isBlank() -> {
+                        cpos--
+                        this.textField.text = this.lines[cpos]
+                        this.lines.removeAt(cpos)
+                        this.textField.setCursorPositionEnd()
+                    }
+                    this.textField.cursorPosition == 0 -> {
+                        val currLine = this.textField.text
+                        val prevLine = this.lines[cpos-1]
+                        val merged = prevLine + currLine
+                        if(merged.length > this.textField.maxStringLength){
+                            val cutBefore = merged.substring(0, this.textField.maxStringLength)
+                            val cutAfter = merged.substring(this.textField.maxStringLength)
+                            cpos--
+                            this.lines[cpos] = ""
+                            this.textField.text = cutBefore
+                            this.lines[cpos+1] = cutAfter
+                            this.textField.cursorPosition = prevLine.length
+                        }else{
+                            this.lines.removeAt(cpos - 1)
+                            this.textField.text = merged
+                            cpos--
+                            this.textField.cursorPosition = prevLine.length
+                        }
+                    }
+                    else -> this.textField.textboxKeyTyped(typedChar, keyCode)
+                }
+            }
+            else -> {
+                if(this.textField.cursorPosition == this.textField.maxStringLength){
+                    moveLine(false)
+                }
+                this.textField.textboxKeyTyped(typedChar, keyCode)
+            }
+        }
+    }
+
+    private fun moveLine(up: Boolean = true){
+        if(this.textField.text.isNotBlank())
+            this.lines[cpos] = this.textField.text
+        if(up) cpos-- else cpos++
+        if(cpos < this.lines.size){
+            this.textField.text = this.lines[cpos]
+            this.lines[cpos] = ""
         }
     }
 
