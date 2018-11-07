@@ -90,11 +90,6 @@ abstract class PrintableScreen(system: CouchDesktopSystem) : AbstractSystemScree
             val (index, s) = i
             this.fontRenderer.drawString(s, cx, cy + (8 * index), Color.WHITE.rgb)
         }
-        this.resetCaretLocation()
-    }
-
-    fun resetCaretLocation(){
-        cy += (8 * this.lines.size)
     }
 
 }
@@ -129,7 +124,7 @@ class BootScreen(system: CouchDesktopSystem) : PrintableScreen(system){
         }
         val prepareResponseData = { NBTTagCompound() }
         val processResponseData: ProcessData = { _, world, pos, player ->
-            player.openGui(DevicesPlus, 0, world, pos.x, pos.y, pos.z)
+            GuiRegistry.openGui("terminal_screen", player, world, pos)
         }
         MessageFactory.sendDataToServerWithResponse(
                 this.system.desktop.pos,
@@ -152,7 +147,7 @@ class TerminalScreen(system: CouchDesktopSystem) : PrintableScreen(system){
                 this.cx,
                 this.cy,
                 this.w - 25,
-                this.h - 25
+                25
         )
     }
 
@@ -179,6 +174,9 @@ class TerminalScreen(system: CouchDesktopSystem) : PrintableScreen(system){
     override fun onInit() {
         this.w = this.width - 35
         this.h = this.height - 35
+        this.textField.isFocused = true
+        this.textField.enableBackgroundDrawing = false
+        this.textField.text = preText
     }
 
     override fun onKeyTyped(typedChar: Char, keyCode: Int) {
@@ -204,8 +202,19 @@ class TerminalScreen(system: CouchDesktopSystem) : PrintableScreen(system){
         this.textField.textboxKeyTyped(typedChar, keyCode)
     }
 
+    override fun onDraw() {
+        super.onDraw()
+        this.textField.drawTextBox()
+        this.resetCaretLocation()
+    }
+
     override fun onUpdate() {
         this.preText = "${this.currentDirectory.path} >"
+        this.textField.updateCursorCounter()
+    }
+
+    fun resetCaretLocation(){
+        textField.y = cy + (8 * this.lines.size)
     }
 
 }
@@ -227,9 +236,9 @@ object GuiRegistry : IGuiHandler{
     }
 
     override fun getClientGuiElement(ID: Int, player: EntityPlayer, world: World, x: Int, y: Int, z: Int): Any?{
-        val valueStream = registeredGuis.values.stream()
-        if(valueStream.anyMatch { it.first == ID }){
-            val value = valueStream.filter { it.first == ID }.findFirst().get()
+        val valueStream = registeredGuis.values.stream().filter { it.first == ID }.findFirst()
+        if(valueStream.isPresent){
+            val value = valueStream.get()
             return value.second
         }
         return null

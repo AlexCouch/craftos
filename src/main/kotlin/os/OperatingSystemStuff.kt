@@ -6,7 +6,6 @@ import network.Port
 import os.filesystem.FileSystem
 import system.DeviceSystem
 import shell.Shell
-import utils.printstr
 
 interface OperatingSystem{
     val name: String
@@ -19,10 +18,8 @@ interface OperatingSystem{
     fun start()
     fun serializeOS(): NBTTagCompound
     fun deserializeOS(nbt: NBTTagCompound)
-    /**
-     * Will mostly be used to check if ports are functioning correctly; mostly internal
-     */
-    fun getNextAvailablePort(): Port<*>?{
+
+    /*fun getNextAvailablePort(): Port<*>?{
         for(port in this.ports){
             if(port.available){
                 return port
@@ -30,14 +27,9 @@ interface OperatingSystem{
         }
         printstr("There are no ports available!", this.shell)
         return null
-    }
+    }*/
 
-    /**
-     * If you need a specific kind of port (video, sound, network, input, etc)
-     *
-     * This is what you want most of the time
-     */
-    fun getNextAvailablePort(including: Class<*>): Port<*>?{
+    /*fun getNextAvailablePort(including: Class<*>): Port<*>?{
         for(port in this.ports){
             if(port.available){
                 if(port::class.java == including){
@@ -47,5 +39,5 @@ interface OperatingSystem{
         }
         printstr("No available port of type: ${including.canonicalName}")
         return null
-    }
+    }*/
 }

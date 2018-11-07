@@ -11,11 +11,13 @@ import net.minecraft.nbt.NBTTagList
 import net.minecraft.nbt.NBTTagString
 import net.minecraft.util.math.BlockPos
 import net.minecraftforge.common.util.Constants
+import system.CouchDesktopSystem
 import utils.getCurrentComputer
 
-abstract class Shell(open val os: OperatingSystem){
+abstract class Shell(val os: OperatingSystem){
     abstract val commands: ArrayList<TerminalCommand>
     abstract val packageManager: PackageManager
+    protected val system = os.system as CouchDesktopSystem
 
     abstract fun sendCommand(commandName: String, commandArgs: Array<String>)
     abstract fun printStringServer(string: String, pos: BlockPos, player: EntityPlayerMP)
@@ -28,19 +30,12 @@ abstract class Shell(open val os: OperatingSystem){
 
     open fun getCommand(name: String): TerminalCommand = commands.stream().filter { it.name.resourcePath == name }.findFirst().get()
 
-    /*open fun getPackage(name: String): Package = packageManager.installedPackages.stream().filter { it.name == name }.findFirst().get()
+    fun isCommand(name: String) = this.commands.stream().anyMatch { it.name.resourcePath == name }
+    fun isPackage(name: String) = this.packageManager.isPackageInstalled(name)
 
-    open fun verifyCommandOrPackage(commandName: String): Boolean = when {
-        commands.stream().anyMatch { it.name.resourcePath == commandName } -> true
-        packageManager.installedPackages.stream().anyMatch { it.name == commandName } -> false
-        else -> {
-            printstr("There is no command or package with that name: $commandName")
-            false
-        }
-    }*/
-
-    open fun openPackage(opener: EntityPlayerMP, pack: Package, args: Array<String>){
-        pack.func(opener, this.os, arrayListOf(*args))
+    fun openPackage(name: String){
+        val pack = packageManager.getInstalledPackage(name) ?: return
+        pack.init()
     }
 
     open fun executeCommand(executor: EntityPlayerMP, command: TerminalCommand, args: Array<String>){
@@ -48,7 +43,7 @@ abstract class Shell(open val os: OperatingSystem){
     }
 }
 
-class CouchShell(override val os: CouchOS) : Shell(os){
+class CouchShell(os: CouchOS) : Shell(os){
     override val commands: ArrayList<TerminalCommand> = arrayListOf()
     override val packageManager: PackageManager = PackageManager(this)
 
@@ -95,11 +90,15 @@ class CouchShell(override val os: CouchOS) : Shell(os){
                     args += str
                 }
                 val shell = te.system.os?.shell!!
-                val command = shell.getCommand(name)
-                shell.executeCommand(player as EntityPlayerMP, command, args.toTypedArray())
+                if(shell.isCommand(name)) {
+                    val command = shell.getCommand(name)
+                    shell.executeCommand(player as EntityPlayerMP, command, args.toTypedArray())
+                }else if(shell.isPackage(name)){
+                    shell.openPackage(name)
+                }
             }
         }
-        MessageFactory.sendDataToServer(this.os.system.desktop.pos, prepareData, processData)
+        MessageFactory.sendDataToServer(this.system.desktop.pos, prepareData, processData)
     }
 
     override fun start(player: EntityPlayerMP) {

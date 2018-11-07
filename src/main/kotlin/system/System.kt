@@ -33,15 +33,15 @@ class CouchDesktopSystem(val desktop: TileEntityDesktopComputer) : DeviceSystem<
 
     override fun start() {
         //load up ROM, and check all hardware for faults
-        GuiRegistry.registerGui(BootScreen(this))
-        GuiRegistry.registerGui(TerminalScreen(this))
+        GuiRegistry.registerGui("boot_screen", BootScreen(this))
+        GuiRegistry.registerGui("terminal_screen", TerminalScreen(this))
         startOS()
     }
 
     private fun startOS(){
         val prepareMessageData = { NBTTagCompound() }
         val processMessageData: ProcessData = { _, world, pos, player ->
-            player.openGui(DevicesPlus, 1, world, pos.x, pos.y, pos.z)
+            GuiRegistry.openGui("boot_screen", player, world, pos)
         }
         val prepareResponseData = { NBTTagCompound() }
         val processResponseData: ProcessData = { _, world, pos, player ->

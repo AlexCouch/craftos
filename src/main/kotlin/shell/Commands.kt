@@ -1,11 +1,13 @@
 package shell
 
+import client.PrintableScreen
 import messages.MessageFactory
 import messages.ProcessData
 import modid
 import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util.ResourceLocation
+import system.CouchDesktopSystem
 import utils.getCurrentComputer
 
 interface TerminalCommand{
@@ -86,9 +88,12 @@ object ClearCommand : TerminalCommand{
                 val prepareData = { NBTTagCompound() }
                 val processData: ProcessData = {_, world, pos, p ->
                     val te = getCurrentComputer(world, pos, p)!!
-                    te.system.os?.screenAbstract?.clearScreen()
+                    val screen = te.system.os?.screenAbstract!!
+                    if(screen is PrintableScreen){
+                        screen.clearScreen()
+                    }
                 }
-                MessageFactory.sendDataToClient(player, terminal.os.system.desktop.pos, prepareData, processData)
+                MessageFactory.sendDataToClient(player, (terminal.os.system as CouchDesktopSystem).desktop.pos, prepareData, processData)
             }
         }
 }

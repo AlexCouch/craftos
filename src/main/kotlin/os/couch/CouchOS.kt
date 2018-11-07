@@ -15,6 +15,7 @@ import os.filesystem.Folder
 import system.CouchDesktopSystem
 import shell.*
 import messages.*
+import pkg.texteditor.TextEditorPackage
 
 class CouchOS(override val system: CouchDesktopSystem) : OperatingSystem {
     override val shell: Shell = CouchShell(this)
@@ -66,6 +67,8 @@ class CouchOS(override val system: CouchDesktopSystem) : OperatingSystem {
             printToBootScreen("\t${it.name}")
         }
         printToBootScreen("\tFile system setup complete!")
+        this.shell.packageManager.registerPackage(TextEditorPackage(this.system))
+        this.shell.packageManager.installPackage("mcte")
         printToBootScreen("")
         printToBootScreen("Operating system ready...press enter to continue...")
         unlockBootScreenInput()

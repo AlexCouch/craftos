@@ -5,11 +5,8 @@ import client.GuiRegistry
 import messages.ProcessData
 import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.nbt.NBTTagCompound
-import os.OperatingSystem
 import shell.Shell
 import system.CouchDesktopSystem
-import utils.printstr
-import DevicesPlus
 import messages.MessageFactory
 
 abstract class Package(val system: CouchDesktopSystem){
@@ -27,7 +24,7 @@ abstract class RenderablePackage(system: CouchDesktopSystem) : Package(system){
 
         val prepareData: () -> NBTTagCompound = {
             val nbt = NBTTagCompound()
-            nbt.setString("pack_name", this.name)
+            nbt.setString("pack_name", "${this.name}_renderer")
             nbt
         }
         val processData: ProcessData = { nbt, world, pos, player ->
@@ -39,10 +36,15 @@ abstract class RenderablePackage(system: CouchDesktopSystem) : Package(system){
 }
 
 class PackageManager(val shell: Shell){
-    val availablePackages = hashSetOf<Package>()
+    private val availablePackages = hashSetOf<Package>()
     val installedPackages = hashSetOf<Package>()
 
     private val system = shell.os.system as CouchDesktopSystem
+
+    //I don't want anybody being able to do any operations on the available packages.
+    fun registerPackage(pack: Package){
+        this.availablePackages.add(pack)
+    }
 
     fun isPackageInstalled(name: String) = installedPackages.stream().anyMatch { it.name == name }
     fun isPackageAvailable(name: String) = availablePackages.stream().anyMatch { it.name == name }
@@ -72,7 +74,7 @@ class PackageManager(val shell: Shell){
         if(isPackageAvailable(packname)){
             val pack = getAvailablePackage(packname) ?: return
             if(isPackageInstalled(packname)){
-                printstr("That package is already installed: $packname", this.shell)
+                this.shell.printStringServer("That package is already installed: $packname", this.system.desktop.pos, this.system.desktop.player as EntityPlayerMP)
                 return
             }
             this.installedPackages += pack
