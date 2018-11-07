@@ -18,7 +18,7 @@ Planned Implementations:
   * A realistic shell (with shell scripting)
   * Ports (for usb, visual, audio, and networking)
   * Audio/Visual Hardware to connect to computer
-  * Realist Servers (including GET/POST requests)
+  * Realistic Servers (including GET/POST requests)
   * And More
 
 Running
