@@ -82,10 +82,12 @@ class ScrollableTextField(
             Keyboard.KEY_BACK -> {
                 when {
                     this.textField.text.isBlank() -> {
-                        cpos--
-                        this.textField.text = this.lines[cpos]
-                        this.lines.removeAt(cpos)
-                        this.textField.setCursorPositionEnd()
+                        if(cpos > 0) {
+                            this.textField.text = this.lines[cpos]
+                            cpos--
+                            this.lines.removeAt(cpos)
+                            this.textField.setCursorPositionEnd()
+                        }
                     }
                     this.textField.cursorPosition == 0 -> {
                         val currLine = this.textField.text
