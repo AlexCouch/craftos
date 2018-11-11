@@ -163,6 +163,7 @@ class TerminalScreen(system: CouchDesktopSystem) : PrintableScreen(system){
         }
 
     private val commandHistory = arrayListOf<String>()
+    private var commandIndex = -1
 
     fun sendCommand(commandStr: String){
         val commandSplit = commandStr.split(' ')
@@ -192,11 +193,32 @@ class TerminalScreen(system: CouchDesktopSystem) : PrintableScreen(system){
                     lines.add(text)
                 }
                 textField.text = preText
+                commandIndex = -1
                 return
             }
             Keyboard.KEY_BACK -> {
                 val text = textField.text
                 if (text == preText) return
+            }
+            Keyboard.KEY_UP -> {
+                if(commandHistory.size == 0) return
+
+                if(commandIndex == -1) commandIndex = commandHistory.size
+                if(commandIndex - 1 < 0) return
+
+                textField.text = commandHistory.get(--commandIndex)
+            }
+            Keyboard.KEY_DOWN -> {
+                if(commandHistory.size == 0) return
+
+                if(commandIndex == -1) commandIndex = commandHistory.size
+                if(commandIndex + 1 >= commandHistory.size) {
+                    commandIndex = commandHistory.size
+                    textField.text = ""
+                    return
+                }
+
+                textField.text = commandHistory.get(++commandIndex)
             }
         }
         this.textField.textboxKeyTyped(typedChar, keyCode)
