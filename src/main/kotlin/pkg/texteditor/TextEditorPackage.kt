@@ -4,6 +4,7 @@ import pkg.*
 import client.AbstractSystemScreen
 import net.minecraft.client.gui.FontRenderer
 import net.minecraft.client.gui.Gui
+import net.minecraft.client.gui.GuiScreen
 import net.minecraft.client.gui.GuiTextField
 import org.lwjgl.input.Keyboard
 import os.filesystem.File
@@ -11,50 +12,67 @@ import system.CouchDesktopSystem
 import java.awt.Color
 
 class ScrollableTextField(
-        private val fontRenderer: FontRenderer,
-        private val x: Int,
-        private val y: Int,
-        private val w: Int,
-        private val h: Int
+        val fontRenderer: FontRenderer
 ) : Gui(){
+    private var x = 0
+    private var y = 0
+    private var w = 0
+    private var h = 0
+
     private var cpos = 0
         set(np){
-            field = np
             when {
-                field <= 0 -> field = 0
-                field >= this.lines.size -> field = this.lines.size - 1
+                np >= this.linesCap -> scroll++
+                np <= scroll -> scroll--
+                np <= 0 -> field = 0
+                np >= this.lines.size -> field = this.lines.size - 1
+                else -> field = np
             }
         }
 
     private var cx = x + 5
     private var cy = y + 5
 
-    private val textField by lazy{
-        GuiTextField(
-                0,
-                fontRenderer,
-                cx,
-                cy,
-                w - 5,
-                25
-        )
-    }
-
-    private val linesCap by lazy { this.h / this.textField.height }
-
-    private val lines = arrayListOf<String>()
-    private var shownLines = listOf<String>()
-    private var scroll: Int = 0
-        set(s){
-            if(field < 0) field = 0
-            if(field >= this.lines.size) field = this.lines.size - 1
-            field = s
+    private val textField: MouselessTextField
+        by lazy {
+            MouselessTextField(
+                    0,
+                    fontRenderer,
+                    cx,
+                    cy,
+                    w - 5,
+                    25
+            )
         }
 
-    fun init(){
+    private var scrollTop = 0
+        get() = scroll
+    private var scrollBottom: Int = 0
+        get() = scrollTop + linesCap
+
+    private var scroll = 0
+        set(ns){
+            field = when{
+                scrollBottom >= this.lines.size || scrollTop < 0 -> return
+                ns <= 0 -> 0
+                else -> ns
+            }
+        }
+
+    private var linesCap: Int = -1
+
+    //Initialize new array list of a single blank/empty string
+    private val lines = arrayListOf("")
+
+    fun init(x: Int, y: Int, w: Int, h: Int){
+        this.x = x
+        this.y = y
+        this.w = w
+        this.h = h
         this.textField.isFocused = true
         this.textField.enableBackgroundDrawing = false
-        this.lines.add("")
+        this.textField.maxStringLength = this.w / this.fontRenderer.getCharWidth('a')
+        this.linesCap = this.h / this.textField.height
     }
 
     fun keyTyped(typedChar: Char, keyCode: Int){
@@ -66,43 +84,32 @@ class ScrollableTextField(
                 moveLine(false)
             }
             Keyboard.KEY_RETURN -> {
-                if(cpos < this.lines.size)
-                    this.lines.add(cpos, this.textField.text)
-                else
-                    this.lines.add(this.textField.text)
-                cpos++
-                if(this.textField.cursorPosition < this.textField.text.length){
-                    this.lines[cpos - 1] = this.textField.text.substring(0..this.textField.cursorPosition)
-                    this.textField.text = this.textField.text.substring(this.textField.cursorPosition)
-                    this.textField.cursorPosition = 0
-                }else{
-                    this.textField.text = ""
-                }
+                createNewLineAndMove()
             }
             Keyboard.KEY_BACK -> {
                 when {
                     this.textField.text.isBlank() -> {
                         if(cpos > 0) {
-                            this.textField.text = this.lines[cpos]
+                            this.textField.text = this.lines[cpos + scroll]
                             cpos--
-                            this.lines.removeAt(cpos)
+                            this.lines.removeAt(cpos + scroll)
                             this.textField.setCursorPositionEnd()
                         }
                     }
                     this.textField.cursorPosition == 0 -> {
                         val currLine = this.textField.text
-                        val prevLine = this.lines[cpos-1]
+                        val prevLine = this.lines[cpos + scroll - 1]
                         val merged = prevLine + currLine
                         if(merged.length > this.textField.maxStringLength){
                             val cutBefore = merged.substring(0, this.textField.maxStringLength)
                             val cutAfter = merged.substring(this.textField.maxStringLength)
                             cpos--
-                            this.lines[cpos] = ""
+                            this.lines[cpos + scroll] = ""
                             this.textField.text = cutBefore
-                            this.lines[cpos+1] = cutAfter
+                            this.lines[cpos+scroll+1] = cutAfter
                             this.textField.cursorPosition = prevLine.length
                         }else{
-                            this.lines.removeAt(cpos - 1)
+                            this.lines.removeAt(cpos + scroll - 1)
                             this.textField.text = merged
                             cpos--
                             this.textField.cursorPosition = prevLine.length
@@ -113,39 +120,57 @@ class ScrollableTextField(
             }
             else -> {
                 if(this.textField.cursorPosition == this.textField.maxStringLength){
-                    moveLine(false)
+                    createNewLineAndMove()
                 }
                 this.textField.textboxKeyTyped(typedChar, keyCode)
             }
         }
     }
 
+    private fun createNewLineAndMove(){
+        if(this.textField.y <= (this.h - this.textField.height)) {
+            if (cpos + scroll < this.lines.size)
+                this.lines.add(cpos + scroll, this.textField.text)
+            else
+                this.lines.add(this.textField.text)
+            cpos++
+            if (this.textField.cursorPosition < this.textField.text.length) {
+                this.lines[cpos + scroll - 1] = this.textField.text.substring(0..this.textField.cursorPosition)
+                this.textField.text = this.textField.text.substring(this.textField.cursorPosition)
+                this.textField.cursorPosition = 0
+            } else {
+                this.textField.text = ""
+            }
+        }
+    }
+
     private fun moveLine(up: Boolean = true){
         if(this.textField.text.isNotBlank())
-            this.lines[cpos] = this.textField.text
+            this.lines[cpos + scroll] = this.textField.text
         if(up) cpos-- else cpos++
-        if(cpos < this.lines.size){
-            this.textField.text = this.lines[cpos]
-            this.lines[cpos] = ""
+        if(cpos + scroll < this.lines.size){
+            this.textField.text = this.lines[cpos + scroll]
+            this.lines[cpos + scroll] = ""
         }
     }
 
     fun onDraw() {
         this.textField.drawTextBox()
-        if(this.shownLines.size > this.linesCap) {
-            this.shownLines = lines.subList(this.y * scroll, linesCap)
+        val shownLines = if(this.lines.size > this.linesCap) {
+            lines.subList(this.scrollTop, this.scrollBottom)
         }else{
-            this.shownLines = lines
+            lines
         }
         shownLines.withIndex().forEach{
             val (i, s) = it
-            if(i < this.lines.size-this.linesCap){
-                return
-            }
             this.fontRenderer.drawString(s, this.cx, cy + (i * 8), Color.WHITE.rgb)
         }
         val linesstr = "Lines: ${this.lines.size}"
-        this.fontRenderer.drawString(linesstr, 10, this.h - this.fontRenderer.getWordWrappedHeight(linesstr, 20), Color.WHITE.rgb)
+        val cursorstr = "Cursor Pos: ${this.textField.cursorPosition}, ${this.cpos}"
+        val scrollstr = "Scroll: ${this.scroll}"
+        this.fontRenderer.drawString(linesstr, 10, this.h - 10, Color.WHITE.rgb)
+        this.fontRenderer.drawString(cursorstr, (this.w / 2) - this.fontRenderer.getStringWidth(cursorstr) / 3, this.h - 10, Color.WHITE.rgb)
+        this.fontRenderer.drawString(scrollstr, this.w - this.fontRenderer.getStringWidth(scrollstr) + 10, this.h - 10, Color.WHITE.rgb)
     }
 
     fun updateScreen() {
@@ -155,8 +180,8 @@ class ScrollableTextField(
 }
 
 class TextEditorPackage(system: CouchDesktopSystem) : RenderablePackage(system){
-    override val renderer: AbstractSystemScreen = GuiTextEditor(system)
-    private val textEditor: TextEditor = TextEditor(system)
+    override val renderer: AbstractSystemScreen by lazy{ GuiTextEditor(system) }
+    private val textEditor: TextEditor by lazy{ TextEditor(system) }
     override val name: String
         get() = "mcte"
     override val version: String
@@ -177,21 +202,14 @@ class GuiTextEditor(system: CouchDesktopSystem) : AbstractSystemScreen(system){
     override val x: Int = 20
     override val y: Int = 20
 
-
     private val scrollableTextField by lazy{
-        ScrollableTextField(
-                this.fontRenderer,
-                this.x,
-                this.y,
-                this.w,
-                this.h
-        )
+        ScrollableTextField(this.fontRenderer)
     }
 
     override fun onInit() {
         this.w = this.width - x
         this.h = this.height - y
-        scrollableTextField.init()
+        scrollableTextField.init(this.x, this.y, this.w, this.h)
     }
 
     override fun onDraw() {

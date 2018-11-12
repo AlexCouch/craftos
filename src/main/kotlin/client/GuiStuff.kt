@@ -206,7 +206,7 @@ class TerminalScreen(system: CouchDesktopSystem) : PrintableScreen(system){
                 if(commandIndex == -1) commandIndex = commandHistory.size
                 if(commandIndex - 1 < 0) return
 
-                textField.text = commandHistory.get(--commandIndex)
+                textField.text = commandHistory[--commandIndex]
             }
             Keyboard.KEY_DOWN -> {
                 if(commandHistory.size == 0) return
@@ -218,7 +218,7 @@ class TerminalScreen(system: CouchDesktopSystem) : PrintableScreen(system){
                     return
                 }
 
-                textField.text = commandHistory.get(++commandIndex)
+                textField.text = commandHistory[++commandIndex]
             }
         }
         this.textField.textboxKeyTyped(typedChar, keyCode)
