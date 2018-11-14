@@ -6,6 +6,7 @@ import net.minecraft.client.gui.FontRenderer
 import net.minecraft.client.gui.Gui
 import net.minecraft.client.gui.GuiScreen
 import net.minecraft.client.gui.GuiTextField
+import net.minecraft.client.renderer.GlStateManager
 import org.lwjgl.input.Keyboard
 import os.filesystem.File
 import system.CouchDesktopSystem
@@ -23,16 +24,16 @@ class ScrollableTextField(
         set(np){
             when {
                 np >= this.linesCap -> scroll++
-                np <= scroll -> scroll--
-                np <= 0 -> field = 0
+                np <= 0 -> {field = 0; scroll--}
                 np >= this.lines.size -> field = this.lines.size - 1
                 else -> field = np
             }
         }
 
-    private var cx = x + 5
-    private var cy = y + 5
-
+    private val cx
+        get() = x + 5
+    private val cy
+        get() = y + 5
     private val textField: MouselessTextField
         by lazy {
             MouselessTextField(
@@ -41,22 +42,23 @@ class ScrollableTextField(
                     cx,
                     cy,
                     w - 5,
-                    25
+                    10
             )
         }
 
-    private var scrollTop = 0
+    private val scrollTop
         get() = scroll
-    private var scrollBottom: Int = 0
+    private val scrollBottom: Int
         get() = scrollTop + linesCap
 
     private var scroll = 0
         set(ns){
-            field = when{
-                scrollBottom >= this.lines.size || scrollTop < 0 -> return
-                ns <= 0 -> 0
-                else -> ns
+            if(ns > scroll){
+                if(scrollBottom >= this.lines.size) return
+            }else if(ns < scroll){
+                if(scrollTop <= 0) return
             }
+            field = ns
         }
 
     private var linesCap: Int = -1
@@ -155,6 +157,7 @@ class ScrollableTextField(
     }
 
     fun onDraw() {
+        Gui.drawRect(this.x, this.y, this.w, this.h, Color.BLACK.rgb)
         this.textField.drawTextBox()
         val shownLines = if(this.lines.size > this.linesCap) {
             lines.subList(this.scrollTop, this.scrollBottom)
@@ -168,9 +171,10 @@ class ScrollableTextField(
         val linesstr = "Lines: ${this.lines.size}"
         val cursorstr = "Cursor Pos: ${this.textField.cursorPosition}, ${this.cpos}"
         val scrollstr = "Scroll: ${this.scroll}"
-        this.fontRenderer.drawString(linesstr, 10, this.h - 10, Color.WHITE.rgb)
+        this.fontRenderer.drawString(linesstr, this.x + 5, this.h - 10, Color.WHITE.rgb)
         this.fontRenderer.drawString(cursorstr, (this.w / 2) - this.fontRenderer.getStringWidth(cursorstr) / 3, this.h - 10, Color.WHITE.rgb)
-        this.fontRenderer.drawString(scrollstr, this.w - this.fontRenderer.getStringWidth(scrollstr) + 10, this.h - 10, Color.WHITE.rgb)
+        this.fontRenderer.drawString(scrollstr, this.w - this.fontRenderer.getStringWidth(scrollstr) - 5, this.h - 10, Color.WHITE.rgb)
+//        this.textField.drawDebugBox()
     }
 
     fun updateScreen() {
