@@ -20,7 +20,7 @@ abstract class Shell(val os: OperatingSystem){
     protected val system = os.system as CouchDesktopSystem
 
     abstract fun sendCommand(commandName: String, commandArgs: Array<String>)
-    abstract fun printStringServer(string: String, pos: BlockPos, player: EntityPlayerMP)
+    abstract fun printStringServer(string: String, player: EntityPlayerMP)
     abstract fun printStringClient(string: String)
     abstract fun start(player: EntityPlayerMP)
 
@@ -47,7 +47,9 @@ class CouchShell(os: CouchOS) : Shell(os){
     override val commands: ArrayList<TerminalCommand> = arrayListOf()
     override val packageManager: PackageManager = PackageManager(this)
 
-    override fun printStringServer(string: String, pos: BlockPos, player: EntityPlayerMP) {
+    private val couchSystem = this.os.system as CouchDesktopSystem
+
+    override fun printStringServer(string: String, player: EntityPlayerMP) {
         val prepareData = {
             val nbt = NBTTagCompound()
             nbt.setString("string", string)
@@ -58,7 +60,7 @@ class CouchShell(os: CouchOS) : Shell(os){
             val te = getCurrentComputer(world, bp, p)!!
             te.system.os?.shell?.printStringClient(str)
         }
-        MessageFactory.sendDataToClient(player, pos, prepareData, processData)
+        MessageFactory.sendDataToClient(player, couchSystem.desktop.pos, prepareData, processData)
     }
 
     override fun printStringClient(string: String) {

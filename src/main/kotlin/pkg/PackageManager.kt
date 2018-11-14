@@ -31,7 +31,7 @@ abstract class RenderablePackage(system: CouchDesktopSystem) : Package(system){
             val name = nbt.getString("pack_name")
             GuiRegistry.openGui(name, player, world, pos)
         }
-        MessageFactory.sendDataToClient(system.player as EntityPlayerMP, system.desktop.pos, prepareData, processData)
+        MessageFactory.sendDataToClient(system.player as EntityPlayerMP, this.system.desktop.pos, prepareData, processData)
     }
 }
 
@@ -55,7 +55,7 @@ class PackageManager(val shell: Shell){
                 return filteredPack.get()
             }
         }
-        this.shell.printStringServer("Could not find available package of name '$name'.", system.desktop.pos, system.player as EntityPlayerMP)
+        this.shell.printStringServer("Could not find available package of name '$name'.", this.system.player as EntityPlayerMP)
         return null
     }
 
@@ -66,7 +66,7 @@ class PackageManager(val shell: Shell){
                 return filteredPack.get()
             }
         }
-        this.shell.printStringServer("Could not find installed package of name '$name'.", system.desktop.pos, system.player as EntityPlayerMP)
+        this.shell.printStringServer("Could not find installed package of name '$name'.", system.player as EntityPlayerMP)
         return null
     }
 
@@ -74,22 +74,22 @@ class PackageManager(val shell: Shell){
         if(isPackageAvailable(packname)){
             val pack = getAvailablePackage(packname) ?: return
             if(isPackageInstalled(packname)){
-                this.shell.printStringServer("That package is already installed: $packname", this.system.desktop.pos, this.system.desktop.player as EntityPlayerMP)
+                this.shell.printStringServer("That package is already installed: $packname", this.system.desktop.player as EntityPlayerMP)
                 return
             }
             this.installedPackages += pack
-            this.shell.printStringServer("Package $packname has been successfully installed!", system.desktop.pos, system.player as EntityPlayerMP)
+            this.shell.printStringServer("Package $packname has been successfully installed!", system.player as EntityPlayerMP)
             return
         }
-        this.shell.printStringServer("There is no package with name $packname.", system.desktop.pos, system.player as EntityPlayerMP)
+        this.shell.printStringServer("There is no package with name $packname.", system.player as EntityPlayerMP)
     }
 
     fun uninstallPackage(name: String){
         if(isPackageInstalled(name)){
             val installedPackage = getInstalledPackage(name) ?: return
             this.installedPackages.remove(installedPackage)
-            this.shell.printStringServer("Package '$name' has been uninstalled!", system.desktop.pos, system.player as EntityPlayerMP)
+            this.shell.printStringServer("Package '$name' has been uninstalled!", system.player as EntityPlayerMP)
         }
-        this.shell.printStringServer("There is no package installed with name '$name'.", system.desktop.pos, system.player as EntityPlayerMP)
+        this.shell.printStringServer("There is no package installed with name '$name'.", system.player as EntityPlayerMP)
     }
 }

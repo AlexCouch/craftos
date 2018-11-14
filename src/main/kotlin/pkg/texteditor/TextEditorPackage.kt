@@ -7,6 +7,7 @@ import net.minecraft.client.gui.Gui
 import net.minecraft.client.gui.GuiScreen
 import net.minecraft.client.gui.GuiTextField
 import net.minecraft.client.renderer.GlStateManager
+import net.minecraft.nbt.NBTTagCompound
 import org.lwjgl.input.Keyboard
 import os.filesystem.File
 import system.CouchDesktopSystem
@@ -93,9 +94,10 @@ class ScrollableTextField(
                     this.textField.text.isBlank() -> {
                         if(cpos > 0) {
                             this.textField.text = this.lines[cpos + scroll]
-                            cpos--
+                            val next = this.lines[cpos + scroll - 1]
                             this.lines.removeAt(cpos + scroll)
-                            this.textField.setCursorPositionEnd()
+                            moveLine()
+                            this.textField.cursorPosition = next.length + 1
                         }
                     }
                     this.textField.cursorPosition == 0 -> {
@@ -118,6 +120,21 @@ class ScrollableTextField(
                         }
                     }
                     else -> this.textField.textboxKeyTyped(typedChar, keyCode)
+                }
+            }
+            Keyboard.KEY_LEFT -> {
+                if(this.textField.cursorPosition == 0){
+                    moveLine()
+                }else{
+                    this.textField.textboxKeyTyped(typedChar, keyCode)
+                }
+            }
+            Keyboard.KEY_RIGHT -> {
+                if(this.textField.cursorPosition == this.textField.text.length){
+                    moveLine(false)
+                    this.textField.cursorPosition = 0
+                }else{
+                    this.textField.textboxKeyTyped(typedChar, keyCode)
                 }
             }
             else -> {
@@ -230,9 +247,12 @@ class GuiTextEditor(system: CouchDesktopSystem) : AbstractSystemScreen(system){
 
 }
 
+data class TextEditorSettings(val fileLoc: String, var foregroundColor: Int, var backgroundColor: Int)
+
 class TextEditor(val system: CouchDesktopSystem){
     private val currentFile: File? = null
     private val fs = system.os?.fileSystem!!
+    private val settings = TextEditorSettings("/home/packages/mcte/settings/.settings", Color.WHITE.rgb, Color.BLACK.rgb)
 
     fun openFile(name: String){
         if(fs.currentDirectory.files.stream().anyMatch { it.name == name }){
@@ -240,7 +260,14 @@ class TextEditor(val system: CouchDesktopSystem){
         }
     }
 
+    private fun settingsInstalled(): Boolean{
+        return false
+    }
+
     fun start(){
+        if(!settingsInstalled()){
+
+        }
     }
 
     fun update(){

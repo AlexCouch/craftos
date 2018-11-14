@@ -28,10 +28,10 @@ class FileSystem(private val os: OperatingSystem){
                 syncWithClient()
                 return true
             }
-            os.shell.printStringServer("$dirName is not a directory; rel cancelled!", system.desktop.pos, system.player as EntityPlayerMP)
+            os.shell.printStringServer("$dirName is not a directory; rel cancelled!", system.player as EntityPlayerMP)
             return false
         }
-        os.shell.printStringServer("$dirName does not exist in current directory!", system.desktop.pos, system.player as EntityPlayerMP)
+        os.shell.printStringServer("$dirName does not exist in current directory!", system.player as EntityPlayerMP)
         return false
     }
 
@@ -58,7 +58,7 @@ class FileSystem(private val os: OperatingSystem){
 
     fun makeDirectory(dirName: String, callback: (() -> NBTTagCompound)?): Boolean{
         if(currentDirectory.files.stream().anyMatch { it.name == dirName }){
-            os.shell.printStringServer("File with name '$dirName' already exists.", system.desktop.pos, system.player as EntityPlayerMP)
+            os.shell.printStringServer("File with name '$dirName' already exists.", system.player as EntityPlayerMP)
             return false
         }
         val data = callback?.invoke() ?: NBTTagCompound()
@@ -70,7 +70,7 @@ class FileSystem(private val os: OperatingSystem){
 
     fun makeFile(fileName: String, callback: (() -> NBTTagCompound)?): Boolean{
         if(currentDirectory.files.stream().anyMatch { it.name == fileName }){
-            os.shell.printStringServer("File with name '$fileName' already exists.", system.desktop.pos, system.player as EntityPlayerMP)
+            os.shell.printStringServer("File with name '$fileName' already exists.", system.player as EntityPlayerMP)
             return false
         }
         val data = callback?.invoke() ?: NBTTagCompound()
@@ -94,6 +94,43 @@ class FileSystem(private val os: OperatingSystem){
         return false
     }
 
+    fun doesFileExist(name: String, inCurrent: Boolean): Boolean{
+        if(inCurrent){
+            if(this.currentDirectory.files.stream().anyMatch { it.name == name }){
+                val first = this.currentDirectory.files.stream().findFirst()
+                return first.isPresent
+            }
+        }else{
+            var i = 0
+            var parent = root
+            val pathsplit = name.split('/')
+            while(true){
+                val fn = pathsplit[i]
+                if(parent.files.stream().anyMatch { it.name == fn }){
+                    if(i == pathsplit.size) return true
+                    val f = parent.files.stream().filter { it.name == name }.findFirst().get()
+                    if(f is Folder){
+                        parent = f
+                    }else{
+                        break
+                    }
+                    i++
+                    continue
+                }else{
+                    break
+                }
+            }
+        }
+        return false
+    }
+
+    fun getFile(name: String): File?{
+        return this.currentDirectory.files.stream().filter { it.name == name }.findFirst().get()
+    }
+
+    fun doesFileExistHere(name: String): Boolean = this.doesFileExist(name, true)
+    fun doesFileExistThere(path: String): Boolean = this.doesFileExist(path, false)
+
     fun makeFile(fileName: String) = this.makeFile(fileName, null)
 
     fun writeToFile(fileName: String, callback: (fileData: NBTTagCompound) -> Unit): Boolean{
@@ -102,7 +139,7 @@ class FileSystem(private val os: OperatingSystem){
             callback(file.data)
             return true
         }
-        this.os.shell.printStringServer("Could not find file with name '$fileName; data was not written.", this.system.desktop.pos, this.system.desktop.player as EntityPlayerMP)
+        this.os.shell.printStringServer("Could not find file with name '$fileName; data was not written.", this.system.desktop.player as EntityPlayerMP)
         return false
     }
 
@@ -118,7 +155,7 @@ class FileSystem(private val os: OperatingSystem){
             callback(file.data)
             return
         }
-        this.os.shell.printStringServer("Could not find file with path '$path; data was not written.", this.system.desktop.pos, this.system.desktop.player as EntityPlayerMP)
+        this.os.shell.printStringServer("Could not find file with path '$path; data was not written.", this.system.desktop.player as EntityPlayerMP)
     }
 
     fun serialize(): NBTTagCompound = root.data
