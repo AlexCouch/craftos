@@ -32,7 +32,7 @@ abstract class AbstractSystemScreen(val system: CouchDesktopSystem) : GuiScreen(
 
     abstract fun onInit()
     abstract fun onDraw()
-    abstract fun onKeyTyped(typedChar: Char, keyCode: Int)
+    open fun onKeyTyped(typedChar: Char, keyCode: Int){}
     abstract fun onUpdate()
 
     override fun initGui() {
