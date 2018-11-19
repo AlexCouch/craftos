@@ -86,7 +86,7 @@ class PackageManager(val shell: Shell){
                 return
             }
             this.installedPackages += pack
-            this.shell.os.fileSystem.makeDirectory("/home/packages/$packname")
+            this.shell.os.fileSystem.makeDirectory("/home/packages/$packname", null)
             this.shell.printStringServer("Package $packname has been successfully installed!", system.desktop.pos, system.player as EntityPlayerMP)
             return
         }

@@ -20,7 +20,7 @@ import java.util.*
 
 class CouchOS(override val system: CouchDesktopSystem) : OperatingSystem {
     override val shell: Shell = CouchShell(this)
-    override val fileSystem: FileSystem = FileSystem(this)
+    override val fileSystem: FileSystem = CouchFileSystem(this)
 
     override val ports: ArrayList<Port<*>>
         get() = arrayListOf()

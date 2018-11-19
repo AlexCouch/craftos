@@ -105,7 +105,7 @@ object MakeFileCommand : TerminalCommand{
         get() = { player, terminal, args ->
             if(args.size == 1){
                 val name = args[0]
-                terminal.os.fileSystem.makeFileHere(name)
+                terminal.os.fileSystem.makeFile(name, true, null)
                 terminal.printStringServer("File with name '$name' created!", terminal.os.system.te.pos, player)
             }else{
                 terminal.printStringServer("Incorrect amount of args; should only take name of file.", terminal.os.system.te.pos, player)
@@ -120,7 +120,7 @@ object MakeDirCommand : TerminalCommand{
         get() = { player, terminal, args ->
             if(args.size == 1){
                 val name = args[0]
-                terminal.os.fileSystem.makeDirectory(name)
+                terminal.os.fileSystem.makeDirectory(name, null)
                 terminal.printStringServer("Directory with name '$name' created!", terminal.os.system.te.pos, player)
             }else{
                 terminal.printStringServer("Incorrect amount of args; should only take name of directory.", terminal.os.system.te.pos, player)

@@ -5,3 +5,13 @@ Alex Couch, #1:
     * Files are now bound to a custom File Type that has a custom data format that is done in the readData and writeData function implementations.
     * Packages now have access to an exit function that *should* safely close the current package and switch back to the shell command line (terminal)
 ~ 11/19/2018
+
+Maki325, #2:
+    * Abstracted FileSystem class as an interface
+    * Created CouchFileSystem - mostly as before, just using the interface(removed doesFileExistHere and makeFileHere as they are done using other function with here set to true)
+    * Because of the remove of doesFileExistHere and makeFileHere code in some classes was changed to use doesFileExist and makeFile
+    * Fixed the Gui not opening - it the system has started already, the start function wont be called which handles the opening of Gui, so I added some code that would activate Gui when the function to
+        start the system is called(only if it is active)
+
+    * A bug found when using command "cd home/packages"
+~ 11/19/2018

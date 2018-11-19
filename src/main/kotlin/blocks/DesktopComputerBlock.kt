@@ -1,5 +1,6 @@
 package blocks
 
+import client.GuiRegistry
 import modid
 import net.minecraft.block.Block
 import net.minecraft.block.material.Material
@@ -55,7 +56,20 @@ class TileEntityDesktopComputer : TileEntity(){
     val system: CouchDesktopSystem = CouchDesktopSystem(this)
 
     fun startup(){
-        if(started) return
+        if(started) {
+            val prepareMessageData = { NBTTagCompound() }
+            val processMessageData: ProcessData = { _, world, pos, player ->
+                GuiRegistry.openGui("boot_screen", player, world, pos)
+            }
+            MessageFactory.sendDataToClient(
+                    "openGui",
+                    this.player as EntityPlayerMP,
+                    this.pos,
+                    prepareMessageData,
+                    processMessageData
+            )
+            return
+        }
         started = true
         this.system.start()
         val blockstate = this.world.getBlockState(this.pos)

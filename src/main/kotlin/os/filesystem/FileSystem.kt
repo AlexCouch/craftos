@@ -9,7 +9,65 @@ import system.CouchDesktopSystem
 import utils.getCurrentComputer
 import kotlin.streams.toList
 
-class FileSystem(private val os: OperatingSystem){
+interface FileSystem {
+
+    var currentDirectory: Folder
+
+    /**
+     * Changes the current directory
+     * @param path - new reference directory
+     */
+    fun changeDirectory(path: String): Boolean
+    /**
+     * @param path - where to create the directory(including with the name)
+     * @param callback - directory data
+     */
+    fun makeDirectory(path: String, callback: (() -> NBTTagCompound)?): Boolean
+    /**
+     * @param path - the location of the directory(including with the name)
+     */
+    fun deleteDirectory(path: String): Boolean
+
+    /**
+     * Sync the file system with the client
+     */
+    fun syncWithClient()
+
+    /**
+     * @param path - where to create the file(including with the name)
+     * @param callback - file data
+     */
+    fun makeFile(path: String, here: Boolean = false, callback: (() -> NBTTagCompound)?): Boolean
+    /**
+     * @param path - the location of the file(including with the name)
+     */
+    fun deleteFile(path: String, here: Boolean = false): Boolean
+    /**
+     * Returns the file at the location specified
+     * @param path - the location of the file(including with the name)
+     */
+    fun getFile(path: String, here: Boolean = false): SimpleFile?
+
+    /**
+     * Writes the data to the file at the location specified
+     * @param path - the location of the file(including with the name)
+     * @param callback - the data of the file
+     */
+    fun writeToFileWithPath(path: String, callback: () -> NBTTagCompound): Boolean
+
+    /**
+     * Checks if the file exists at the specified location
+     * @param path - location of the file(including with the name)
+     */
+    fun doesFileExist(path: String, here: Boolean = false): Boolean
+
+
+    fun serialize(): NBTTagCompound
+
+    fun deserialize(nbt: NBTTagCompound)
+}
+
+class CouchFileSystem(private val os: OperatingSystem){
     private var root = Folder("root", NBTTagCompound())
     var currentDirectory = root
 

@@ -15,6 +15,12 @@ enum class FileTypes(val typeName: String, val type: FileTypeText){
     TEXT("text", FileTypeText)
 }
 
+object FileTypeRegistry {
+
+    var maps = HashMap<FileType<*>, Package>()
+
+}
+
 object FileTypeText : FileType<String>{
     override val typeName: String = "text"
 
