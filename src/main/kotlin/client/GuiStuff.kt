@@ -127,6 +127,7 @@ class BootScreen(system: CouchDesktopSystem) : PrintableScreen(system){
             GuiRegistry.openGui("terminal_screen", player, world, pos)
         }
         MessageFactory.sendDataToServerWithResponse(
+                "startShell",
                 this.system.desktop.pos,
                 prepareMessageData,
                 processMessageData,

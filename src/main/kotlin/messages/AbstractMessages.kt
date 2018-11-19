@@ -28,19 +28,20 @@ object MessageFactory{
         stream.registerMessage(ResponsiveServerMessageHandler(), ResponsiveServerMessage::class.java, ++id, Side.SERVER)
     }
 
-    fun sendDataToClient(player: EntityPlayerMP, pos: BlockPos, prepareData: () -> NBTTagCompound, processData: ProcessData){
+    fun sendDataToClient(messageName: String, player: EntityPlayerMP, pos: BlockPos, prepareData: () -> NBTTagCompound, processData: ProcessData){
         val dataPacket = DataPacket(prepareData, processData)
-        val clientMessage = ClientSideMessage(dataPacket, pos)
+        val clientMessage = ClientSideMessage(messageName, dataPacket, pos)
         stream.sendTo(clientMessage, player)
     }
 
-    fun sendDataToServer(pos: BlockPos, prepareData: () -> NBTTagCompound, processData: ProcessData){
+    fun sendDataToServer(messageName: String, pos: BlockPos, prepareData: () -> NBTTagCompound, processData: ProcessData){
         val dataPacket = DataPacket(prepareData, processData)
-        val serverMessage = ServerSideMessage(dataPacket, pos)
+        val serverMessage = ServerSideMessage(messageName, dataPacket, pos)
         stream.sendToServer(serverMessage)
     }
 
     fun sendDataToServerWithResponse(
+            messageName: String,
             pos: BlockPos,
             prepareMessageData: () -> NBTTagCompound,
             processMessageData: ProcessData,
@@ -53,11 +54,12 @@ object MessageFactory{
                 prepareResponseData,
                 processResponseData
         )
-        val responsiveServerMessage = ResponsiveServerMessage(responsiveDataPacket, pos)
+        val responsiveServerMessage = ResponsiveServerMessage(messageName, responsiveDataPacket, pos)
         stream.sendToServer(responsiveServerMessage)
     }
 
     fun sendDataToClientWithResponse(
+            messageName: String,
             pos: BlockPos,
             player: EntityPlayerMP,
             prepareMessageData: () -> NBTTagCompound,
@@ -71,7 +73,7 @@ object MessageFactory{
                 prepareResponseData,
                 processResponseData
         )
-        val responsiveClientMessage = ResponsiveClientMessage(responsiveDataPacket, pos)
+        val responsiveClientMessage = ResponsiveClientMessage(messageName, responsiveDataPacket, pos)
         stream.sendTo(responsiveClientMessage, player)
     }
 }
@@ -101,12 +103,14 @@ data class ResponsiveDataPacket(
 )
 
 abstract class BasicSidedMessage() : IMessage{
+    var name: String = ""
     var dataPacket: DataPacket? = null
     var pos: BlockPos = BlockPos.ORIGIN
     var data = NBTTagCompound()
 }
 
 abstract class ResponsiveSidedMessage() : IMessage{
+    var name: String = ""
     var dataPacket: ResponsiveDataPacket? = null
     var pos: BlockPos = BlockPos.ORIGIN
     var data = NBTTagCompound()

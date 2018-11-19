@@ -2,18 +2,26 @@ package pkg.texteditor
 
 import pkg.*
 import client.AbstractSystemScreen
+import messages.MessageFactory
+import messages.ProcessData
+import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.FontRenderer
 import net.minecraft.client.gui.Gui
-import net.minecraft.client.gui.GuiScreen
-import net.minecraft.client.gui.GuiTextField
-import net.minecraft.client.renderer.GlStateManager
+import net.minecraft.entity.player.EntityPlayerMP
+import net.minecraft.nbt.NBTTagCompound
+import net.minecraft.nbt.NBTTagString
+import net.minecraftforge.common.util.Constants.NBT.TAG_STRING
 import org.lwjgl.input.Keyboard
 import os.filesystem.File
+import os.filesystem.FileTypes
+import os.filesystem.SimpleFile
+import os.filesystem.TextFile
 import system.CouchDesktopSystem
 import java.awt.Color
 
 class ScrollableTextField(
-        val fontRenderer: FontRenderer
+        val fontRenderer: FontRenderer,
+        val guiTextEditor: GuiTextEditor
 ) : Gui(){
     private var x = 0
     private var y = 0
@@ -31,9 +39,9 @@ class ScrollableTextField(
         }
 
     private val cx
-        get() = x + 5
+        get() = x + 15
     private val cy
-        get() = y + 5
+        get() = y + 15
     private val textField: MouselessTextField
         by lazy {
             MouselessTextField(
@@ -64,7 +72,8 @@ class ScrollableTextField(
     private var linesCap: Int = -1
 
     //Initialize new array list of a single blank/empty string
-    private val lines = arrayListOf("")
+    val lines = arrayListOf("")
+    var currentFileName: String = ""
 
     fun init(x: Int, y: Int, w: Int, h: Int){
         this.x = x
@@ -78,17 +87,17 @@ class ScrollableTextField(
     }
 
     fun keyTyped(typedChar: Char, keyCode: Int){
-        when(keyCode){
-            Keyboard.KEY_UP -> {
+        when{
+            keyCode == Keyboard.KEY_UP -> {
                 moveLine()
             }
-            Keyboard.KEY_DOWN -> {
+            keyCode == Keyboard.KEY_DOWN -> {
                 moveLine(false)
             }
-            Keyboard.KEY_RETURN -> {
+            keyCode == Keyboard.KEY_RETURN -> {
                 createNewLineAndMove()
             }
-            Keyboard.KEY_BACK -> {
+            keyCode == Keyboard.KEY_BACK -> {
                 when {
                     this.textField.text.isBlank() -> {
                         if(cpos > 0) {
@@ -120,6 +129,12 @@ class ScrollableTextField(
                     else -> this.textField.textboxKeyTyped(typedChar, keyCode)
                 }
             }
+            Keyboard.isKeyDown(Keyboard.KEY_LCONTROL) && Keyboard.isKeyDown(Keyboard.KEY_S) -> {
+                saveFile()
+            }
+            Keyboard.isKeyDown(Keyboard.KEY_LCONTROL) && Keyboard.isKeyDown(Keyboard.KEY_RETURN) -> {
+                this.guiTextEditor.textEditor.exit()
+            }
             else -> {
                 if(this.textField.cursorPosition == this.textField.maxStringLength){
                     createNewLineAndMove()
@@ -127,6 +142,15 @@ class ScrollableTextField(
                 this.textField.textboxKeyTyped(typedChar, keyCode)
             }
         }
+    }
+
+    private fun saveFile(){
+        val data = StringBuilder()
+        this.lines.forEach {
+            data.append(it)
+            data.append("\n")
+        }
+        this.guiTextEditor.saveFile(data.toString())
     }
 
     private fun createNewLineAndMove(){
@@ -171,9 +195,11 @@ class ScrollableTextField(
         val linesstr = "Lines: ${this.lines.size}"
         val cursorstr = "Cursor Pos: ${this.textField.cursorPosition}, ${this.cpos}"
         val scrollstr = "Scroll: ${this.scroll}"
+        val filenamestr = "File: ${this.currentFileName}"
         this.fontRenderer.drawString(linesstr, this.x + 5, this.h - 10, Color.WHITE.rgb)
         this.fontRenderer.drawString(cursorstr, (this.w / 2) - this.fontRenderer.getStringWidth(cursorstr) / 3, this.h - 10, Color.WHITE.rgb)
         this.fontRenderer.drawString(scrollstr, this.w - this.fontRenderer.getStringWidth(scrollstr) - 5, this.h - 10, Color.WHITE.rgb)
+        this.fontRenderer.drawString(filenamestr, this.x + 5, 5, Color.WHITE.rgb)
 //        this.textField.drawDebugBox()
     }
 
@@ -184,36 +210,53 @@ class ScrollableTextField(
 }
 
 class TextEditorPackage(system: CouchDesktopSystem) : RenderablePackage(system){
-    override val renderer: AbstractSystemScreen by lazy{ GuiTextEditor(system) }
-    private val textEditor: TextEditor by lazy{ TextEditor(system) }
+    private val textEditor: TextEditor by lazy{ TextEditor(system, this) }
+    override val renderer: AbstractSystemScreen by lazy{ GuiTextEditor(system, textEditor) }
     override val name: String
         get() = "mcte"
     override val version: String
         get() = "0.1"
 
-    override fun init() {
-        super.init()
-        textEditor.start()
+    override fun init(args: Array<String>) {
+        super.init(args)
+        if(args.size != 1){
+            return
+        }
+        textEditor.start(args[0])
     }
 
     override fun onUpdate() {
         textEditor.update()
     }
-
 }
 
-class GuiTextEditor(system: CouchDesktopSystem) : AbstractSystemScreen(system){
+class GuiTextEditor(system: CouchDesktopSystem, val textEditor: TextEditor) : AbstractSystemScreen(system){
     override val x: Int = 20
     override val y: Int = 20
 
-    private val scrollableTextField by lazy{
-        ScrollableTextField(this.fontRenderer)
+    val scrollableTextField by lazy{
+        ScrollableTextField(this.fontRenderer, this)
     }
 
     override fun onInit() {
         this.w = this.width - x
         this.h = this.height - y
         scrollableTextField.init(this.x, this.y, this.w, this.h)
+    }
+
+    fun saveFile(data: String){
+        val prepareData = {
+            val nbt = NBTTagCompound()
+            nbt.setString("text", data)
+            nbt
+        }
+        val processData: ProcessData = { d, _, _, _ ->
+            if(d.hasKey("text")){
+                val text = d.getString("text")
+                this.textEditor.saveFile(text)
+            }
+        }
+        MessageFactory.sendDataToServer("saveFile", this.system.desktop.pos, prepareData, processData)
     }
 
     override fun onDraw() {
@@ -230,20 +273,70 @@ class GuiTextEditor(system: CouchDesktopSystem) : AbstractSystemScreen(system){
 
 }
 
-class TextEditor(val system: CouchDesktopSystem){
-    private val currentFile: File? = null
+data class TextEditorSettings(val path: String, var foregroundColor: Int, var backgroundColor: Int)
+
+class TextEditor(val system: CouchDesktopSystem, val tepack: TextEditorPackage){
+    private var currentFile: File<String>? = null
     private val fs = system.os?.fileSystem!!
 
-    fun openFile(name: String){
-        if(fs.currentDirectory.files.stream().anyMatch { it.name == name }){
+    private val settings = TextEditorSettings("/home/packages/mcte/.settings", Color.WHITE.rgb, Color.BLACK.rgb)
 
+    fun openFile(name: String){
+        if(fs.doesFileExist(name, true)){
+            val file = fs.getFile(name, true) ?: return
+            if(file is File<*>){
+                if(file.fileType == FileTypes.TEXT.type){
+                    @Suppress("UNCHECKED_CAST")
+                    this.currentFile = file as File<String>
+                    syncWithGui()
+                }
+            }
+        }else{
+            currentFile = TextFile(name)
+            syncWithGui()
         }
     }
 
-    fun start(){
+    fun exit(){
+        this.tepack.exit()
     }
 
-    fun update(){
-
+    fun saveFile(data: String){
+        this.currentFile?.writeData(data)
     }
+
+    fun syncWithGui(){
+        val prepareData: () -> NBTTagCompound = {
+            this.currentFile?.data ?: NBTTagCompound()
+        }
+        val processData: ProcessData = { data, _, _, _ ->
+            val screen = Minecraft.getMinecraft().currentScreen
+            if(screen is GuiTextEditor){
+                if(data.hasKey("text")){
+                    val text = data.getTagList("text", TAG_STRING)
+                    text.forEach {
+                        val str = (it as NBTTagString).string
+                        screen.scrollableTextField.lines += str
+                    }
+                }
+                screen.scrollableTextField.currentFileName = data.getString("name")
+            }
+        }
+        MessageFactory.sendDataToClient("syncWithGui", this.system.player as EntityPlayerMP, this.system.desktop.pos, prepareData, processData)
+    }
+
+    fun start(fileName: String){
+        if(!fs.doesFileExist(settings.path, false)){
+            fs.makeFile(settings.path){
+                val nbt = NBTTagCompound()
+                nbt.setInteger("fore_col", this.settings.foregroundColor)
+                nbt.setInteger("back_col", this.settings.backgroundColor)
+                nbt
+            }
+        }
+
+        this.openFile(fileName)
+    }
+
+    fun update(){}
 }

@@ -10,28 +10,31 @@ import net.minecraftforge.fml.common.network.simpleimpl.MessageContext
 
 class ServerSideMessage() : BasicSidedMessage(){
 
-    constructor(dataPacket: DataPacket, pos: BlockPos) : this(){
+    constructor(name: String, dataPacket: DataPacket, pos: BlockPos) : this(){
         this.dataPacket = dataPacket
         this.pos = pos
+        this.name = name
     }
 
     override fun fromBytes(buf: ByteBuf) {
         val d = ByteBufUtils.readTag(buf) ?: NBTTagCompound()
-        if(d.hasKey("packet") && d.hasKey("pos")){
+        if(d.hasKey("packet") && d.hasKey("pos") && d.hasKey("name")){
+            val name = d.getString("name")
             val packet = d.getCompoundTag("packet")
             val postag = d.getCompoundTag("pos")
             this.pos = NBTUtil.getPosFromTag(postag)
             this.data = packet
-            this.dataPacket = CommonDataSpace.retrieveDataPacket("server_data") ?: return
+            this.dataPacket = CommonDataSpace.retrieveDataPacket(name) ?: return
         }
     }
 
     override fun toBytes(buf: ByteBuf) {
         val d = NBTTagCompound()
+        d.setString("name", this.name)
         d.setTag("packet", this.dataPacket?.prepareMessageData?.invoke() ?: NBTTagCompound())
         d.setTag("pos", NBTUtil.createPosTag(this.pos))
         ByteBufUtils.writeTag(buf, d)
-        CommonDataSpace.storeDataPackets("server_data", this.dataPacket ?: return)
+        CommonDataSpace.storeDataPackets(this.name, this.dataPacket ?: return)
     }
 
 }

@@ -12,14 +12,22 @@ import messages.MessageFactory
 abstract class Package(val system: CouchDesktopSystem){
     abstract val name: String
     abstract val version: String
-    abstract fun init()
+    abstract fun init(args: Array<String>)
     abstract fun onUpdate()
+
+    fun exit(){
+        val prepareData = {NBTTagCompound()}
+        val processData: ProcessData = {_,world,pos,player ->
+            GuiRegistry.openGui("terminal_screen", player, world, pos)
+        }
+        MessageFactory.sendDataToClient("exitPackage", this.system.desktop.player as EntityPlayerMP, this.system.desktop.pos, prepareData, processData)
+    }
 }
 
 abstract class RenderablePackage(system: CouchDesktopSystem) : Package(system){
     abstract val renderer: AbstractSystemScreen
 
-    override fun init() {
+    override fun init(args: Array<String>) {
         GuiRegistry.registerGui("${this.name}_renderer", this.renderer)
 
         val prepareData: () -> NBTTagCompound = {
@@ -31,7 +39,7 @@ abstract class RenderablePackage(system: CouchDesktopSystem) : Package(system){
             val name = nbt.getString("pack_name")
             GuiRegistry.openGui(name, player, world, pos)
         }
-        MessageFactory.sendDataToClient(system.player as EntityPlayerMP, system.desktop.pos, prepareData, processData)
+        MessageFactory.sendDataToClient("initPackageGui", system.player as EntityPlayerMP, system.desktop.pos, prepareData, processData)
     }
 }
 
@@ -78,6 +86,7 @@ class PackageManager(val shell: Shell){
                 return
             }
             this.installedPackages += pack
+            this.shell.os.fileSystem.makeDirectory("/home/packages/$packname")
             this.shell.printStringServer("Package $packname has been successfully installed!", system.desktop.pos, system.player as EntityPlayerMP)
             return
         }

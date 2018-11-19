@@ -69,7 +69,7 @@ object RelocateCommand : TerminalCommand{
         get() = { player, terminal, args ->
             if(args.size == 1){
                 val name = args[0]
-                if(terminal.os.fileSystem.relocate(name)){
+                if(terminal.os.fileSystem.changeDirectory(name)){
                     terminal.printStringServer("Relocated to ${terminal.os.fileSystem.currentDirectory.path}.", terminal.os.system.te.pos, player)
                 }
             }else{
@@ -93,7 +93,7 @@ object ClearCommand : TerminalCommand{
                         screen.clearScreen()
                     }
                 }
-                MessageFactory.sendDataToClient(player, (terminal.os.system as CouchDesktopSystem).desktop.pos, prepareData, processData)
+                MessageFactory.sendDataToClient("clearCommand", player, (terminal.os.system as CouchDesktopSystem).desktop.pos, prepareData, processData)
             }
         }
 }
@@ -105,7 +105,7 @@ object MakeFileCommand : TerminalCommand{
         get() = { player, terminal, args ->
             if(args.size == 1){
                 val name = args[0]
-                terminal.os.fileSystem.makeFile(name)
+                terminal.os.fileSystem.makeFileHere(name)
                 terminal.printStringServer("File with name '$name' created!", terminal.os.system.te.pos, player)
             }else{
                 terminal.printStringServer("Incorrect amount of args; should only take name of file.", terminal.os.system.te.pos, player)

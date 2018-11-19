@@ -16,6 +16,7 @@ import system.CouchDesktopSystem
 import shell.*
 import messages.*
 import pkg.texteditor.TextEditorPackage
+import java.util.*
 
 class CouchOS(override val system: CouchDesktopSystem) : OperatingSystem {
     override val shell: Shell = CouchShell(this)
@@ -35,6 +36,7 @@ class CouchOS(override val system: CouchDesktopSystem) : OperatingSystem {
     }
 
     private fun printToBootScreen(message: String){
+        val random = Random()
         println(message)
         val prepareData = {
             val nbt = NBTTagCompound()
@@ -48,7 +50,7 @@ class CouchOS(override val system: CouchDesktopSystem) : OperatingSystem {
                 cs.printToScreen(str)
             }
         }
-        MessageFactory.sendDataToClient(system.player as EntityPlayerMP, this.system.desktop.pos, prepareData, processData)
+        MessageFactory.sendDataToClient("printToBootScreen_${random.nextInt()}", system.player as EntityPlayerMP, this.system.desktop.pos, prepareData, processData)
     }
 
     override fun start() {
@@ -62,13 +64,7 @@ class CouchOS(override val system: CouchDesktopSystem) : OperatingSystem {
         val packagesfolder = Folder("packages", NBTTagCompound())
         homefolder.addFile(packagesfolder)
         this.fileSystem.currentDirectory.addFile(homefolder)
-        printToBootScreen("Files in current directory...")
-        this.fileSystem.currentDirectory.files.forEach {
-            printToBootScreen("\t${it.name}")
-        }
         printToBootScreen("\tFile system setup complete!")
-        this.shell.packageManager.registerPackage(TextEditorPackage(this.system))
-        this.shell.packageManager.installPackage("mcte")
         printToBootScreen("")
         printToBootScreen("Operating system ready...press enter to continue...")
         unlockBootScreenInput()
@@ -82,7 +78,7 @@ class CouchOS(override val system: CouchDesktopSystem) : OperatingSystem {
                 currentScreen.allowInput = true
             }
         }
-        MessageFactory.sendDataToClient(this.system.player as EntityPlayerMP, this.system.desktop.pos, prepareData, processData)
+        MessageFactory.sendDataToClient("unlockBootScreenInput", this.system.player as EntityPlayerMP, this.system.desktop.pos, prepareData, processData)
     }
 
     override fun serializeOS(): NBTTagCompound{

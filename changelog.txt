@@ -1,0 +1,7 @@
+Alex Couch, #1:
+    * Fixed bug in messages wrapper where data packets put into the Common Data Space aren't put due to duplicate names. Names are now required for sending data to client/server.
+    * Started implementing file paths. Paths need to be resolved correctly. Using paths in the file system needs to be improved upon.
+    * File System right now tries to resolve paths when a path is passed into a file function such as makeDirectory, makeFile, changeDirectory, etc.
+    * Files are now bound to a custom File Type that has a custom data format that is done in the readData and writeData function implementations.
+    * Packages now have access to an exit function that *should* safely close the current package and switch back to the shell command line (terminal)
+~ 11/19/2018

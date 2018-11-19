@@ -49,6 +49,7 @@ class CouchDesktopSystem(val desktop: TileEntityDesktopComputer) : DeviceSystem<
             comp.system.os?.start()
         }
         MessageFactory.sendDataToClientWithResponse(
+                "startOS",
                 this.desktop.pos,
                 this.player as EntityPlayerMP,
                 prepareMessageData,

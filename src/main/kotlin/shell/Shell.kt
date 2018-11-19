@@ -11,8 +11,10 @@ import net.minecraft.nbt.NBTTagList
 import net.minecraft.nbt.NBTTagString
 import net.minecraft.util.math.BlockPos
 import net.minecraftforge.common.util.Constants
+import pkg.texteditor.TextEditorPackage
 import system.CouchDesktopSystem
 import utils.getCurrentComputer
+import java.util.*
 
 abstract class Shell(val os: OperatingSystem){
     abstract val commands: ArrayList<TerminalCommand>
@@ -33,9 +35,9 @@ abstract class Shell(val os: OperatingSystem){
     fun isCommand(name: String) = this.commands.stream().anyMatch { it.name.resourcePath == name }
     fun isPackage(name: String) = this.packageManager.isPackageInstalled(name)
 
-    fun openPackage(name: String){
+    fun openPackage(name: String, args: Array<String>){
         val pack = packageManager.getInstalledPackage(name) ?: return
-        pack.init()
+        pack.init(args)
     }
 
     open fun executeCommand(executor: EntityPlayerMP, command: TerminalCommand, args: Array<String>){
@@ -48,6 +50,7 @@ class CouchShell(os: CouchOS) : Shell(os){
     override val packageManager: PackageManager = PackageManager(this)
 
     override fun printStringServer(string: String, pos: BlockPos, player: EntityPlayerMP) {
+        val random = Random()
         val prepareData = {
             val nbt = NBTTagCompound()
             nbt.setString("string", string)
@@ -58,7 +61,7 @@ class CouchShell(os: CouchOS) : Shell(os){
             val te = getCurrentComputer(world, bp, p)!!
             te.system.os?.shell?.printStringClient(str)
         }
-        MessageFactory.sendDataToClient(player, pos, prepareData, processData)
+        MessageFactory.sendDataToClient("printStringServer_${random.nextInt()}", player, pos, prepareData, processData)
     }
 
     override fun printStringClient(string: String) {
@@ -94,11 +97,11 @@ class CouchShell(os: CouchOS) : Shell(os){
                     val command = shell.getCommand(name)
                     shell.executeCommand(player as EntityPlayerMP, command, args.toTypedArray())
                 }else if(shell.isPackage(name)){
-                    shell.openPackage(name)
+                    shell.openPackage(name, args.toTypedArray())
                 }
             }
         }
-        MessageFactory.sendDataToServer(this.system.desktop.pos, prepareData, processData)
+        MessageFactory.sendDataToServer("sendCommand", this.system.desktop.pos, prepareData, processData)
     }
 
     override fun start(player: EntityPlayerMP) {
@@ -111,5 +114,8 @@ class CouchShell(os: CouchOS) : Shell(os){
         this.registerCommand(DeleteFileCommand)
         this.registerCommand(DeleteDirectoryCommand)
         this.registerCommand(ListFilesCommand)
+
+        this.packageManager.registerPackage(TextEditorPackage(this.system))
+        this.packageManager.installPackage("mcte")
     }
 }
