@@ -297,7 +297,7 @@ class TextEditor(val system: CouchDesktopSystem, val tepack: TextEditorPackage){
     }
 
     fun saveFile(data: String){
-        this.currentFile?.writeString(data)
+        this.currentFile?.writeData(data)
     }
 
     fun syncWithGui(){

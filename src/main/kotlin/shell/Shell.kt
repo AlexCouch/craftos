@@ -16,30 +16,78 @@ import system.CouchDesktopSystem
 import utils.getCurrentComputer
 import java.util.*
 
+/**
+ * An abstract class containing the basis for a shell which takes an [OperatingSystem] object as constructor parameter.
+ *
+ * This class contains registered commands ([commands]), a [PackageManager], a [sendCommand], [printStringServer],
+ * [printStringClient], [start], [registerCommand], [getCommand], [isCommand], [isPackage], [openPackage], and [executeCommand].
+ */
 abstract class Shell(val os: OperatingSystem){
+    /**
+     * The list of registered commands.
+     */
     abstract val commands: ArrayList<TerminalCommand>
+    /**
+     * The package manager. Must set this to an implementation of [PackageManager].
+     */
     abstract val packageManager: PackageManager
     protected val system = os.system as CouchDesktopSystem
 
+    /**
+     * This function sends a command given the [commandName] with the [commandArgs]. This must first
+     * check if the command exists and then send a message to the server telling it to execute said command.
+     */
     abstract fun sendCommand(commandName: String, commandArgs: Array<String>)
+
+    /**
+     * This is a server side function that sends a message to the client to print a string to the shell screen gui.
+     */
     abstract fun printStringServer(string: String, pos: BlockPos, player: EntityPlayerMP)
+
+    /**
+     * This is a client side function that prints a string to the shell screen gui.
+     */
     abstract fun printStringClient(string: String)
+
+    /**
+     * This is the function that initializes everything that you need for your shell to work, such as registering commands,
+     * sending signals to and fro the server/client for startup processes.
+     */
     abstract fun start(player: EntityPlayerMP)
 
+    /**
+     * This is a basic open function that simply registers a [TerminalCommand]. This can be overridden for whatever purpose.
+     */
     open fun registerCommand(command: TerminalCommand){
         this.commands += command
     }
 
+    /**
+     * This retrieves the registered command given the [name].
+     */
     open fun getCommand(name: String): TerminalCommand = commands.stream().filter { it.name.resourcePath == name }.findFirst().get()
 
+    /**
+     * This checks if the given name matches any of the registered commands' names.
+     */
     fun isCommand(name: String) = this.commands.stream().anyMatch { it.name.resourcePath == name }
+
+    /**
+     * This checks if the given name matches any of the registered packages in the package manager.
+     */
     fun isPackage(name: String) = this.packageManager.isPackageInstalled(name)
 
+    /**
+     * This tells the package manager to open a package given the [name].
+     */
     fun openPackage(name: String, args: Array<String>){
         val pack = packageManager.getInstalledPackage(name) ?: return
         pack.init(args)
     }
 
+    /**
+     * This is an open function that simply executes the given terminal command. This is done server side.
+     */
     open fun executeCommand(executor: EntityPlayerMP, command: TerminalCommand, args: Array<String>){
         command.execute(executor, this, args)
     }
