@@ -103,12 +103,28 @@ object MakeFileCommand : TerminalCommand{
         get() = ResourceLocation(modid, "mkf")
     override val execute: (EntityPlayerMP, Shell, Array<String>) -> Unit
         get() = { player, terminal, args ->
-            if(args.size == 1){
-                val name = args[0]
-                terminal.os.fileSystem.makeFile(name, true, null)
-                terminal.printStringServer("File with name '$name' created!", terminal.os.system.te.pos, player)
-            }else{
-                terminal.printStringServer("Incorrect amount of args; should only take name of file.", terminal.os.system.te.pos, player)
+            when {
+                args.size == 1 -> {
+                    val name = args[0]
+                    terminal.os.fileSystem.makeFile(name, "text", true, null)
+                    terminal.printStringServer("File with name '$name' created!", terminal.os.system.te.pos, player)
+                }
+                args.size == 2 -> {
+                    val name: String =if(args[0].startsWith("-n=")) {
+                        args[0].substring(0.."-n=".length)
+                    }else{
+                        terminal.printStringServer("Fist argument must be a file name; please use '-n=file_name'.", terminal.os.system.te.pos, player)
+                        throw RuntimeException("First argument was not a file name.")
+                    }
+                    val type: String = if(args[1].startsWith("-t=")){
+                        args[1].substring(0.."-t=".length)
+                    }else{
+                        terminal.printStringServer("Second argument must be a file type name; please use '-t=type_name'.", terminal.os.system.te.pos, player)
+                        throw RuntimeException("Second argument was not a file type name.")
+                    }
+                    terminal.os.fileSystem.makeFile(name, type, true, null)
+                }
+                else -> terminal.printStringServer("Incorrect amount of args; should only take name of file.", terminal.os.system.te.pos, player)
             }
         }
 }

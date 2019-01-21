@@ -12,9 +12,7 @@ import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.nbt.NBTTagString
 import net.minecraftforge.common.util.Constants.NBT.TAG_STRING
 import org.lwjgl.input.Keyboard
-import os.filesystem.File
 import os.filesystem.FileTypes
-import os.filesystem.SimpleFile
 import os.filesystem.TextFile
 import system.CouchDesktopSystem
 import java.awt.Color
@@ -129,10 +127,10 @@ class ScrollableTextField(
                     else -> this.textField.textboxKeyTyped(typedChar, keyCode)
                 }
             }
-            Keyboard.isKeyDown(Keyboard.KEY_LCONTROL) && Keyboard.isKeyDown(Keyboard.KEY_S) -> {
+            keyCode == Keyboard.KEY_S && Keyboard.isKeyDown(Keyboard.KEY_LCONTROL) -> {
                 saveFile()
             }
-            Keyboard.isKeyDown(Keyboard.KEY_LCONTROL) && Keyboard.isKeyDown(Keyboard.KEY_RETURN) -> {
+            keyCode == Keyboard.KEY_RETURN && Keyboard.isKeyDown(Keyboard.KEY_LCONTROL) -> {
                 this.guiTextEditor.textEditor.exit()
             }
             else -> {
@@ -276,7 +274,7 @@ class GuiTextEditor(system: CouchDesktopSystem, val textEditor: TextEditor) : Ab
 data class TextEditorSettings(val path: String, var foregroundColor: Int, var backgroundColor: Int)
 
 class TextEditor(val system: CouchDesktopSystem, val tepack: TextEditorPackage){
-    private var currentFile: File<String>? = null
+    private var currentFile: TextFile? = null
     private val fs = system.os?.fileSystem!!
 
     private val settings = TextEditorSettings("/home/packages/mcte/.settings", Color.WHITE.rgb, Color.BLACK.rgb)
@@ -284,12 +282,9 @@ class TextEditor(val system: CouchDesktopSystem, val tepack: TextEditorPackage){
     fun openFile(name: String){
         if(fs.doesFileExist(name, true)){
             val file = fs.getFile(name, true) ?: return
-            if(file is File<*>){
-                if(file.fileType == FileTypes.TEXT.type){
-                    @Suppress("UNCHECKED_CAST")
-                    this.currentFile = file as File<String>
-                    syncWithGui()
-                }
+            if(file.fileType == FileTypes.TEXT.type){
+                this.currentFile = file as TextFile
+                syncWithGui()
             }
         }else{
             currentFile = TextFile(name)
@@ -302,7 +297,7 @@ class TextEditor(val system: CouchDesktopSystem, val tepack: TextEditorPackage){
     }
 
     fun saveFile(data: String){
-        this.currentFile?.writeData(data)
+        this.currentFile?.writeString(data)
     }
 
     fun syncWithGui(){
@@ -327,7 +322,7 @@ class TextEditor(val system: CouchDesktopSystem, val tepack: TextEditorPackage){
 
     fun start(fileName: String){
         if(!fs.doesFileExist(settings.path, false)){
-            fs.makeFile(settings.path){
+            fs.makeFile(settings.path, "text"){
                 val nbt = NBTTagCompound()
                 nbt.setInteger("fore_col", this.settings.foregroundColor)
                 nbt.setInteger("back_col", this.settings.backgroundColor)

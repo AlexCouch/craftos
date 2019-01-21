@@ -8,7 +8,8 @@ import net.minecraft.nbt.NBTTagCompound
 import os.OperatingSystem
 import os.filesystem.FileSystem
 import os.filesystem.Folder
-import os.filesystem.SimpleFile
+import os.filesystem.File
+import os.filesystem.getFileTypeByName
 import system.CouchDesktopSystem
 import utils.getCurrentComputer
 import kotlin.streams.toList
@@ -85,7 +86,8 @@ class CouchFileSystem(private val os: OperatingSystem) : FileSystem {
             parentpath.append("/")
         }
         if(this.changeDirectory(parentpath.toString())){
-            this.currentDirectory.addFile(SimpleFile(pathsplit[pathsplit.size - 1], callback?.invoke() ?: NBTTagCompound()))
+            this.currentDirectory.addFile(Folder(pathsplit[pathsplit.size - 1], callback?.invoke()
+                    ?: NBTTagCompound()))
             this.changeDirectory(currDir.path)
             return true
         }
@@ -96,12 +98,12 @@ class CouchFileSystem(private val os: OperatingSystem) : FileSystem {
         return this.deleteFile(path)
     }
 
-    override fun makeFile(path: String, here: Boolean, callback: (() -> NBTTagCompound)?): Boolean {
+    override fun makeFile(path: String, fileType: String, here: Boolean, callback: (() -> NBTTagCompound)?): Boolean {
         if(this.doesFileExist(path, here)){
             return false
         }
         if(here){
-            val file = SimpleFile(path, callback?.invoke() ?: NBTTagCompound())
+            val file = File(path, getFileTypeByName(fileType), callback?.invoke() ?: NBTTagCompound())
             this.currentDirectory + file
         }else{
             val pathsplit = path.split('/')
@@ -112,7 +114,7 @@ class CouchFileSystem(private val os: OperatingSystem) : FileSystem {
                 parentpath.append("/")
             }
             if(this.changeDirectory(parentpath.toString())){
-                this.currentDirectory.addFile(SimpleFile(pathsplit[pathsplit.size - 1], callback?.invoke() ?: NBTTagCompound()))
+                this.currentDirectory.addFile(File(pathsplit[pathsplit.size - 1], getFileTypeByName(fileType), callback?.invoke() ?: NBTTagCompound()))
                 this.currentDirectory = currDir
                 return true
             }
@@ -128,7 +130,7 @@ class CouchFileSystem(private val os: OperatingSystem) : FileSystem {
         return false
     }
 
-    override fun getFile(path: String, here: Boolean): SimpleFile? = this.checkAndGetFile(path, here).second
+    override fun getFile(path: String, here: Boolean): File<*>? = this.checkAndGetFile(path, here).second
 
     override fun writeToFileWithPath(path: String, callback: () -> NBTTagCompound): Boolean {
         val file = this.getFile(path, false) ?: return false
@@ -139,9 +141,9 @@ class CouchFileSystem(private val os: OperatingSystem) : FileSystem {
 
     override fun doesFileExist(path: String, here: Boolean): Boolean = this.checkAndGetFile(path, here).first
 
-    private fun checkAndGetFile(path: String, here: Boolean = false): Pair<Boolean, SimpleFile?>{
+    private fun checkAndGetFile(path: String, here: Boolean = false): Pair<Boolean, File<*>?>{
         var exists = false
-        var file: SimpleFile? = null
+        var file: File<*>? = null
         if(here){
             exists = this.currentDirectory.files.stream().anyMatch { it.name == path }
         }else{
