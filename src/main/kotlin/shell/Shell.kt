@@ -1,26 +1,26 @@
-package terminal
+package shell
 
+import client.TerminalScreen
 import net.minecraft.entity.player.EntityPlayerMP
 import os.OperatingSystem
 import os.couch.CouchOS
 import pkg.*
 import messages.*
-import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.nbt.NBTTagList
 import net.minecraft.nbt.NBTTagString
 import net.minecraft.util.math.BlockPos
-import net.minecraft.world.World
 import net.minecraftforge.common.util.Constants
+import system.CouchDesktopSystem
 import utils.getCurrentComputer
-import utils.printstr
 
-abstract class Terminal(open val os: OperatingSystem){
+abstract class Shell(val os: OperatingSystem){
     abstract val commands: ArrayList<TerminalCommand>
     abstract val packageManager: PackageManager
+    protected val system = os.system as CouchDesktopSystem
 
     abstract fun sendCommand(commandName: String, commandArgs: Array<String>)
-    abstract fun printStringServer(string: String, pos: BlockPos, player: EntityPlayerMP)
+    abstract fun printStringServer(string: String, player: EntityPlayerMP)
     abstract fun printStringClient(string: String)
     abstract fun start(player: EntityPlayerMP)
 
@@ -30,19 +30,12 @@ abstract class Terminal(open val os: OperatingSystem){
 
     open fun getCommand(name: String): TerminalCommand = commands.stream().filter { it.name.resourcePath == name }.findFirst().get()
 
-    open fun getPackage(name: String): Package = packageManager.installedPackages.stream().filter { it.name == name }.findFirst().get()
+    fun isCommand(name: String) = this.commands.stream().anyMatch { it.name.resourcePath == name }
+    fun isPackage(name: String) = this.packageManager.isPackageInstalled(name)
 
-    open fun verifyCommandOrPackage(commandName: String): Boolean = when {
-        commands.stream().anyMatch { it.name.resourcePath == commandName } -> true
-        packageManager.installedPackages.stream().anyMatch { it.name == commandName } -> false
-        else -> {
-            printstr("There is no command or package with that name: $commandName")
-            false
-        }
-    }
-
-    open fun openPackage(opener: EntityPlayerMP, pack: Package, args: Array<String>){
-        pack.func(opener, this.os, arrayListOf(*args))
+    fun openPackage(name: String){
+        val pack = packageManager.getInstalledPackage(name) ?: return
+        pack.init()
     }
 
     open fun executeCommand(executor: EntityPlayerMP, command: TerminalCommand, args: Array<String>){
@@ -50,11 +43,13 @@ abstract class Terminal(open val os: OperatingSystem){
     }
 }
 
-class CouchTerminal(override val os: CouchOS) : Terminal(os){
+class CouchShell(os: CouchOS) : Shell(os){
     override val commands: ArrayList<TerminalCommand> = arrayListOf()
     override val packageManager: PackageManager = PackageManager(this)
 
-    override fun printStringServer(string: String, pos: BlockPos, player: EntityPlayerMP) {
+    private val couchSystem = this.os.system as CouchDesktopSystem
+
+    override fun printStringServer(string: String, player: EntityPlayerMP) {
         val prepareData = {
             val nbt = NBTTagCompound()
             nbt.setString("string", string)
@@ -63,14 +58,16 @@ class CouchTerminal(override val os: CouchOS) : Terminal(os){
         val processData: ProcessData = { data, world, bp, p ->
             val str = data.getString("string")
             val te = getCurrentComputer(world, bp, p)!!
-            val screen = te.system.os!!.screen!!
-            screen.printToScreen(str)
+            te.system.os?.shell?.printStringClient(str)
         }
-        MessageFactory.sendDataToClient(player, pos, prepareData, processData)
+        MessageFactory.sendDataToClient(player, couchSystem.desktop.pos, prepareData, processData)
     }
 
     override fun printStringClient(string: String) {
-        this.os.screen!!.printToScreen(string)
+        val screen = this.os.screenAbstract!!
+        if(screen is TerminalScreen){
+            screen.printToScreen(string)
+        }
     }
 
     override fun sendCommand(commandName: String, commandArgs: Array<String>){
@@ -84,7 +81,7 @@ class CouchTerminal(override val os: CouchOS) : Terminal(os){
             nbt.setTag("args", argsList)
             nbt
         }
-        val processData: (data: NBTTagCompound, world: World, pos: BlockPos, player: EntityPlayer) -> Unit = { data, world, pos, player ->
+        val processData: ProcessData = { data, world, pos, player ->
             if(data.hasKey("name") && data.hasKey("args")){
                 val name = data.getString("name")
                 val te = getCurrentComputer(world, pos, player)!!
@@ -94,12 +91,16 @@ class CouchTerminal(override val os: CouchOS) : Terminal(os){
                     val str = (a as NBTTagString).string
                     args += str
                 }
-                val terminal = te.system.os?.terminal!!
-                val command = terminal.getCommand(name)
-                te.system.os?.terminal?.executeCommand(player as EntityPlayerMP, command, args.toTypedArray())
+                val shell = te.system.os?.shell!!
+                if(shell.isCommand(name)) {
+                    val command = shell.getCommand(name)
+                    shell.executeCommand(player as EntityPlayerMP, command, args.toTypedArray())
+                }else if(shell.isPackage(name)){
+                    shell.openPackage(name)
+                }
             }
         }
-        MessageFactory.sendDataToServer(this.os.screen!!.te.pos, prepareData, processData)
+        MessageFactory.sendDataToServer(this.system.desktop.pos, prepareData, processData)
     }
 
     override fun start(player: EntityPlayerMP) {

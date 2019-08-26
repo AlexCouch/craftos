@@ -1,7 +1,7 @@
 package os.couch
 
 import client.BootScreen
-import client.SystemScreen
+import client.AbstractSystemScreen
 import net.minecraft.client.Minecraft
 import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.nbt.NBTTagCompound
@@ -13,11 +13,12 @@ import os.OperatingSystem
 import os.filesystem.FileSystem
 import os.filesystem.Folder
 import system.CouchDesktopSystem
-import terminal.*
+import shell.*
 import messages.*
+import pkg.texteditor.TextEditorPackage
 
 class CouchOS(override val system: CouchDesktopSystem) : OperatingSystem {
-    override val terminal: Terminal = CouchTerminal(this)
+    override val shell: Shell = CouchShell(this)
     override val fileSystem: FileSystem = FileSystem(this)
 
     override val ports: ArrayList<Port<*>>
@@ -25,10 +26,10 @@ class CouchOS(override val system: CouchDesktopSystem) : OperatingSystem {
 
     override val name: String
         get() = "CouchOS"
-    override val screen: SystemScreen? by lazy {
+    override val screenAbstract: AbstractSystemScreen? by lazy {
         val cs = Minecraft.getMinecraft().currentScreen ?: return@lazy null
-        if(cs is SystemScreen){
-            return@lazy cs as? SystemScreen
+        if(cs is AbstractSystemScreen){
+            return@lazy cs as? AbstractSystemScreen
         }
         return@lazy null
     }
@@ -66,6 +67,8 @@ class CouchOS(override val system: CouchDesktopSystem) : OperatingSystem {
             printToBootScreen("\t${it.name}")
         }
         printToBootScreen("\tFile system setup complete!")
+        this.shell.packageManager.registerPackage(TextEditorPackage(this.system))
+        this.shell.packageManager.installPackage("mcte")
         printToBootScreen("")
         printToBootScreen("Operating system ready...press enter to continue...")
         unlockBootScreenInput()
@@ -85,7 +88,7 @@ class CouchOS(override val system: CouchDesktopSystem) : OperatingSystem {
     override fun serializeOS(): NBTTagCompound{
         val tag = NBTTagCompound()
         val packsList = NBTTagList()
-        val packs = this.terminal.packageManager.installedPackages
+        val packs = this.shell.packageManager.installedPackages
         packs.stream().forEach {
             packsList.appendTag(NBTTagString(it.name))
         }
@@ -100,7 +103,7 @@ class CouchOS(override val system: CouchDesktopSystem) : OperatingSystem {
         ){
             val packsList = nbt.getTagList("packages", TAG_STRING)
             packsList.forEach {
-                this.terminal.packageManager.installPackage((it as NBTTagString).string)
+                this.shell.packageManager.installPackage((it as NBTTagString).string)
             }
             val fileSystemTag = nbt.getCompoundTag("filesystem")
             this.fileSystem.deserialize(fileSystemTag)

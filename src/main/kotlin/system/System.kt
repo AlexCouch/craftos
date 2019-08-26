@@ -10,6 +10,9 @@ import net.minecraft.util.text.TextComponentString
 import network.Port
 import os.couch.*
 import DevicesPlus
+import client.BootScreen
+import client.GuiRegistry
+import client.TerminalScreen
 import net.minecraft.entity.player.EntityPlayerMP
 import utils.getCurrentComputer
 
@@ -30,14 +33,15 @@ class CouchDesktopSystem(val desktop: TileEntityDesktopComputer) : DeviceSystem<
 
     override fun start() {
         //load up ROM, and check all hardware for faults
-        this.player.sendStatusMessage(TextComponentString("System started..."), true)
+        GuiRegistry.registerGui("boot_screen", BootScreen(this))
+        GuiRegistry.registerGui("terminal_screen", TerminalScreen(this))
         startOS()
     }
 
     private fun startOS(){
         val prepareMessageData = { NBTTagCompound() }
         val processMessageData: ProcessData = { _, world, pos, player ->
-            player.openGui(DevicesPlus, 1, world, pos.x, pos.y, pos.z)
+            GuiRegistry.openGui("boot_screen", player, world, pos)
         }
         val prepareResponseData = { NBTTagCompound() }
         val processResponseData: ProcessData = { _, world, pos, player ->

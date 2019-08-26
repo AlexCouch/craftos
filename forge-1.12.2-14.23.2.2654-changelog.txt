@@ -7569,7 +7569,7 @@ Build 1.7.10-10.13.0.1185:
 	LexManos:
 		Updated FML:
 		MinecraftForge/FML@9d40b761974f10ec2b5868a992260792f8a98e5d Don't scan ObjectHolders if there was an error already, derpitude will ensure.
-		MinecraftForge/FML@76538c1781d6d6a1e4134fb317af99e6f13b46cc Add a terminal transformer and tweaker.
+		MinecraftForge/FML@76538c1781d6d6a1e4134fb317af99e6f13b46cc Add a shell transformer and tweaker.
 		MinecraftForge/FML@aec9228845e50107112bd1f8693f9b4729694c8b Add ExitVisitor to the TerminalTransformer that finds and intercepts any calls to Runtime.exit or System.exit.
 		MinecraftForge/FML@908491d5e7ac26becdac938f38cc90d6b9d73ce1 Move LaunguageRegistry call above normal asset loading to allow resource packs to override mod's language systems.
 		MinecraftForge/FML@d13295e28113a1c310d5bbb90ebfe241fefabe02 Fix FMLAT manifest AccessTransformers, class loader fun!
