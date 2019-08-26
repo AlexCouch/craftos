@@ -100,9 +100,10 @@ class ScrollableTextField(
                     this.textField.text.isBlank() -> {
                         if(cpos > 0) {
                             this.textField.text = this.lines[cpos + scroll]
-                            cpos--
+                            val next = this.lines[cpos + scroll - 1]
                             this.lines.removeAt(cpos + scroll)
-                            this.textField.setCursorPositionEnd()
+                            moveLine()
+                            this.textField.cursorPosition = next.length + 1
                         }
                     }
                     this.textField.cursorPosition == 0 -> {

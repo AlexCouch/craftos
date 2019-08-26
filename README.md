@@ -8,17 +8,23 @@ and I thought 'would it be possible to make realistic oses inside Minecraft? So 
 Current Implementations:
   * Terminal (with commands of course)
   * File System
-  * Basic Network Message Wrapper
+  * Basic Network Message Wrapper (API)
   * Basic Separation of System-OS-Terminal
+  * Basic Text Editor
+  * Simple GUI Wrapper for Packages (API)
+  * Basic Package Manager
 
-Planned Implementations:
-  * Package Manager
+Planned Implementations (Soon):
+  * Improve Package Manager
+  * Improve Text Editor
+  * Shell Scripting
+  * Realistic File I/O
+  
+Planned Implementations (Later):
   * Realistic Hardware
-  * Text Editor
-  * A realistic shell (with shell scripting)
   * Ports (for usb, visual, audio, and networking)
   * Audio/Visual Hardware to connect to computer
-  * Realist Servers (including GET/POST requests)
+  * Realistic Servers (including GET/POST requests)
   * And More
 
 Running
