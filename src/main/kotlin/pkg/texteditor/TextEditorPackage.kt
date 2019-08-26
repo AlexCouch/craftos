@@ -29,10 +29,22 @@ class ScrollableTextField(
     private var cpos = 0
         set(np){
             when {
-                np >= this.linesCap -> scroll++
-                np <= 0 -> {field = 0; scroll--}
-                else -> field = np
+                np < field -> {
+                    if(np <= 0){
+                        field = 0
+                        scroll--
+                        return
+                    }
+                }
+                np > field -> {
+                    if(np >= this.lines.size){
+                        field = this.lines.size - 1
+                        scroll++
+                        return
+                    }
+                }
             }
+            field = np
         }
 
     private val cx
@@ -54,12 +66,12 @@ class ScrollableTextField(
     private val scrollTop
         get() = scroll
     private val scrollBottom: Int
-        get() = scrollTop + linesCap
+        get() = scrollTop + linesCap - 1
 
     private var scroll = 0
         set(ns){
             if(ns > scroll){
-                if(scrollBottom >= this.lines.size) return
+                if(scrollBottom > this.lines.size) return
             }else if(ns < scroll){
                 if(scrollTop <= 0) return
             }
@@ -86,10 +98,14 @@ class ScrollableTextField(
     fun keyTyped(typedChar: Char, keyCode: Int){
         when{
             keyCode == Keyboard.KEY_UP -> {
-                moveLine()
+                if(this.cpos > 0){
+                    moveLine()
+                }
             }
             keyCode == Keyboard.KEY_DOWN -> {
-                moveLine(false)
+                if(this.cpos <= this.lines.size - 1) {
+                    moveLine(false)
+                }
             }
             keyCode == Keyboard.KEY_RETURN -> {
                 createNewLineAndMove()
@@ -135,10 +151,8 @@ class ScrollableTextField(
     private fun backspaceLine(){
         this.lines.removeAt(cpos + scroll)
         moveLine()
-        this.lines[cpos+scroll] = ""
-        if(this.scrollBottom > this.lines.size){
-            this.scroll--
-        }
+        this.scroll--
+        this.textField.setCursorPositionEnd()
     }
 
     private fun saveFile(){
@@ -170,7 +184,7 @@ class ScrollableTextField(
 
     private fun moveLine(up: Boolean = true){
         if(up) cpos-- else cpos++
-        if(cpos + scroll <= this.lines.size){
+        if(cpos + scroll < this.lines.size){
             this.textField.text = this.lines[cpos + scroll]
         }
     }
@@ -178,6 +192,7 @@ class ScrollableTextField(
     fun onDraw() {
         Gui.drawRect(this.x, this.y, this.w, this.h, Color.BLACK.rgb)
         this.textField.drawTextBox()
+        this.textField.drawDebugBox()
         val shownLines = if(this.lines.size > this.linesCap) {
             lines.subList(this.scrollTop, this.scrollBottom)
         }else{
