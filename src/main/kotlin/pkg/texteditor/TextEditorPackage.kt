@@ -31,7 +31,6 @@ class ScrollableTextField(
             when {
                 np >= this.linesCap -> scroll++
                 np <= 0 -> {field = 0; scroll--}
-                np >= this.lines.size -> field = this.lines.size - 1
                 else -> field = np
             }
         }
@@ -97,32 +96,22 @@ class ScrollableTextField(
             }
             keyCode == Keyboard.KEY_BACK -> {
                 when {
-                    this.textField.text.isBlank() -> {
-                        if(cpos > 0) {
-                            this.textField.text = this.lines[cpos + scroll]
-                            val next = this.lines[cpos + scroll - 1]
-                            this.lines.removeAt(cpos + scroll)
-                            moveLine()
-                            this.textField.cursorPosition = next.length + 1
-                        }
-                    }
                     this.textField.cursorPosition == 0 -> {
-                        val currLine = this.textField.text
-                        val prevLine = this.lines[cpos + scroll - 1]
-                        val merged = prevLine + currLine
-                        if(merged.length > this.textField.maxStringLength){
-                            val cutBefore = merged.substring(0, this.textField.maxStringLength)
-                            val cutAfter = merged.substring(this.textField.maxStringLength)
-                            cpos--
-                            this.lines[cpos + scroll] = ""
-                            this.textField.text = cutBefore
-                            this.lines[cpos+scroll+1] = cutAfter
-                            this.textField.cursorPosition = prevLine.length
-                        }else{
-                            this.lines.removeAt(cpos + scroll - 1)
-                            this.textField.text = merged
-                            cpos--
-                            this.textField.cursorPosition = prevLine.length
+                        if(cpos > 0) {
+                            val currLine = this.textField.text
+                            val prevLine = this.lines[cpos + scroll - 1]
+                            val merged = prevLine + currLine
+                            if (merged.length > this.textField.maxStringLength) {
+                                val cutBefore = merged.substring(0, this.textField.maxStringLength)
+                                val cutAfter = merged.substring(this.textField.maxStringLength)
+                                cpos--
+                                this.lines[cpos + scroll] = ""
+                                this.textField.text = cutBefore
+                                this.lines[cpos + scroll + 1] = cutAfter
+                                this.textField.cursorPosition = prevLine.length
+                            } else {
+                                this.backspaceLine()
+                            }
                         }
                     }
                     else -> this.textField.textboxKeyTyped(typedChar, keyCode)
@@ -140,6 +129,15 @@ class ScrollableTextField(
                 }
                 this.textField.textboxKeyTyped(typedChar, keyCode)
             }
+        }
+    }
+
+    private fun backspaceLine(){
+        this.lines.removeAt(cpos + scroll)
+        moveLine()
+        this.lines[cpos+scroll] = ""
+        if(this.scrollBottom > this.lines.size){
+            this.scroll--
         }
     }
 
@@ -166,16 +164,14 @@ class ScrollableTextField(
             } else {
                 this.textField.text = ""
             }
+
         }
     }
 
     private fun moveLine(up: Boolean = true){
-        if(this.textField.text.isNotBlank())
-            this.lines[cpos + scroll] = this.textField.text
         if(up) cpos-- else cpos++
-        if(cpos + scroll < this.lines.size){
+        if(cpos + scroll <= this.lines.size){
             this.textField.text = this.lines[cpos + scroll]
-            this.lines[cpos + scroll] = ""
         }
     }
 

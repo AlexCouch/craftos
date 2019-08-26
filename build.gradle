@@ -12,6 +12,7 @@ buildscript {
 apply plugin: 'net.minecraftforge.gradle.forge'
 //Only edit below this line, the above code adds and enables the necessary things for Forge to be setup.
 apply plugin: 'idea'
+apply plugin: 'kotlin'
 
 version = "0.0.2"
 group = "alexcouch.craftos" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
@@ -59,12 +60,8 @@ processResources {
     }
 }
 
-idea{
-    module{
-        inheritOutputDirs = true
-
-        sourceDirs += file('src/main/kotlin')
-    }
+sourceSets{
+    main.kotlin.srcDirs += 'src/main/kotlin'
 }
 
 repositories {

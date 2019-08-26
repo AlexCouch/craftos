@@ -13,8 +13,8 @@ import net.minecraftforge.fml.common.event.FMLPreInitializationEvent
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.common.network.NetworkRegistry
 
-const val modid = "devices+"
-const val name = "Devices Plus"
+const val modid = "craftos"
+const val name = "CraftOS"
 const val version = "0.1"
 
 @Mod(modid=modid, name=name, version=version, modLanguageAdapter = "net.shadowfacts.forgelin.KotlinAdapter")
@@ -30,7 +30,7 @@ object DevicesPlus{
 
     @Mod.EventHandler
     fun init(event: FMLInitializationEvent){
-        TileEntity.register("desktop_computer", TileEntityDesktopComputer::class.java)
+        TileEntity.register("desktop", TileEntityDesktopComputer::class.java)
     }
 }
 

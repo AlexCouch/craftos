@@ -23,10 +23,10 @@ object PackageManagerCommand : TerminalCommand{
             if (args[0] == "-i") {
                 terminal.packageManager.installPackage(args[1])
             }else{
-                terminal.printStringServer("That is not a valid flag: ${args[0]}", player)
+                terminal.printStringServer("That is not a valid flag: ${args[0]}", terminal.os.system.te.pos, player)
             }
         }else{
-            terminal.printStringServer("Incorrect amount of arguments; only 2 is required.", player)
+            terminal.printStringServer("Incorrect amount of arguments; only 2 is required.", terminal.os.system.te.pos, player)
         }
 
     }
@@ -42,7 +42,7 @@ object EchoCommand : TerminalCommand{
             args.forEachIndexed { i, s ->
                 sb.append("$s${if(i == args.size-1) "" else " "}")
             }
-            terminal.printStringServer(sb.toString(), player)
+            terminal.printStringServer(sb.toString(), terminal.os.system.te.pos, player)
         }
 }
 
@@ -54,9 +54,9 @@ object ListFilesCommand : TerminalCommand{
             val os = terminal.os
             val fs = os.fileSystem
             val files = fs.currentDirectory.files
-            terminal.printStringServer("Files in current directory:", player)
+            terminal.printStringServer("Files in current directory:", terminal.os.system.te.pos, player)
             files.forEach {
-                terminal.printStringServer("\t${it.name}", player)
+                terminal.printStringServer("\t${it.name}", terminal.os.system.te.pos, player)
             }
         }
 
@@ -73,7 +73,7 @@ object RelocateCommand : TerminalCommand{
                     terminal.printStringServer("Relocated to ${terminal.os.fileSystem.currentDirectory.path}.", terminal.os.system.te.pos, player)
                 }
             }else{
-                terminal.printStringServer("This command requires only one argument, you have ${args.size}.", player)
+                terminal.printStringServer("This command requires only one argument, you have ${args.size}.", terminal.os.system.te.pos, player)
             }
         }
 
@@ -93,7 +93,7 @@ object ClearCommand : TerminalCommand{
                         screen.clearScreen()
                     }
                 }
-                MessageFactory.sendDataToClient("clearCommand", player, (terminal.os.system as CouchDesktopSystem).desktop.pos, prepareData, processData)
+                MessageFactory.sendDataToClient("clearCommand", player, terminal.os.system.te.pos, prepareData, processData)
             }
         }
 }
@@ -139,7 +139,7 @@ object MakeDirCommand : TerminalCommand{
                 terminal.os.fileSystem.makeDirectory(name, null)
                 terminal.printStringServer("Directory with name '$name' created!", terminal.os.system.te.pos, player)
             }else{
-                terminal.printStringServer("Incorrect amount of args; should only take name of directory.", player)
+                terminal.printStringServer("Incorrect amount of args; should only take name of directory.", terminal.os.system.te.pos, player)
             }
         }
 }
@@ -151,9 +151,9 @@ object DeleteFileCommand : TerminalCommand{
                 if(args.size == 1){
                     val name = args[0]
                     terminal.os.fileSystem.deleteFile(name)
-                    terminal.printStringServer("File with name '$name' deleted!", player)
+                    terminal.printStringServer("File with name '$name' deleted!", terminal.os.system.te.pos, player)
                 }else{
-                    terminal.printStringServer("Incorrect amount of args; should only take name of file.", player)
+                    terminal.printStringServer("Incorrect amount of args; should only take name of file.", terminal.os.system.te.pos, player)
                 }
             }
 
@@ -167,10 +167,10 @@ object DeleteDirectoryCommand : TerminalCommand{
             if(args.size == 1){
                 val name = args[0]
                 if(terminal.os.fileSystem.deleteFile(name)){
-                    terminal.printStringServer("Directory with name '$name' created!", player)
+                    terminal.printStringServer("Directory with name '$name' created!", terminal.os.system.te.pos, player)
                 }
             }else{
-                terminal.printStringServer("Incorrect amount of args; should only take name of file.", player)
+                terminal.printStringServer("Incorrect amount of args; should only take name of file.", terminal.os.system.te.pos, player)
             }
         }
 }
