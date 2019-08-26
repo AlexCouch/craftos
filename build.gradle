@@ -38,7 +38,6 @@ minecraft {
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin"
     compile "net.shadowfacts:Forgelin:1.6.0"
-    compile "com.mrcrayfish:device-api:0.4.0-1.12.2"
 }
 
 processResources {
