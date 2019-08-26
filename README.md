@@ -33,8 +33,7 @@ mod setup by running setupDecompWorkspace and genIntellijRuns (or eclipse but pl
 Contributing
 =======================
 If you would like to contribute, I have some rules:
-  * Please use Kotlin. If you ABSOLUTELY CANNOT USE KOTLIN THEN I WILL CONVERT ALL NON-KOTLIN CODE TO KOTLIN
+  * Please use Kotlin
   * Please check with me on what could be done. I don't want anybody making big changes that I can't follow
   * Always work within your own branch. Just as the os stuff is inside operating_system branch and will be merged into master.
 If you cannot follow these rules, I will reject your pull requests. 
-I know it seems harsh but I have to do this to make sure nothing breaks and everything is consistent. 
